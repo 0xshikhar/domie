@@ -1,0 +1,64 @@
+'use client';
+
+// XMTP client utilities
+// Note: XMTP will be initialized in the provider component
+
+export interface XMTPMessage {
+  id: string;
+  content: string;
+  senderAddress: string;
+  sent: Date;
+  contentType?: string;
+}
+
+export interface XMTPConversation {
+  peerAddress: string;
+  createdAt: Date;
+  context?: {
+    conversationId: string;
+    metadata: Record<string, any>;
+  };
+}
+
+export interface TradeCard {
+  type: 'trade_card';
+  domainName: string;
+  tokenId: string;
+  price: string;
+  currency: string;
+  action: 'buy' | 'offer' | 'counter';
+  amount?: string;
+}
+
+export function createTradeCardMessage(data: Omit<TradeCard, 'type'>): string {
+  return JSON.stringify({
+    type: 'trade_card',
+    ...data,
+  });
+}
+
+export function parseTradeCardMessage(content: string): TradeCard | null {
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed.type === 'trade_card') {
+      return parsed as TradeCard;
+    }
+  } catch (error) {
+    // Not a trade card message
+  }
+  return null;
+}
+
+export function formatAddress(address: string): string {
+  if (!address) return '';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+export function isTradeCardMessage(content: string): boolean {
+  try {
+    const parsed = JSON.parse(content);
+    return parsed.type === 'trade_card';
+  } catch {
+    return false;
+  }
+}

@@ -16,6 +16,7 @@ import {
 import { agentChain } from '@/lib/customChain';
 import { createConfig } from 'wagmi';
 import { http } from 'viem';
+import { XMTPProvider } from '@/components/messaging/XMTPProvider';
 
 // Configure wagmi client
 const config = createConfig({
@@ -52,13 +53,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         },
                     }}
                 >
-                    {mounted ? (
-                        children
-                    ) : (
-                        <div style={{ visibility: "hidden" }}>
-                            {children}
-                        </div>
-                    )}
+                    <XMTPProvider>
+                        {mounted ? (
+                            children
+                        ) : (
+                            <div style={{ visibility: "hidden" }}>
+                                {children}
+                            </div>
+                        )}
+                    </XMTPProvider>
                 </PrivyProvider>
             </QueryClientProvider>
         </WagmiProvider>

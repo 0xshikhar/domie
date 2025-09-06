@@ -41,7 +41,6 @@ Check out the live demo: [Next14 Web3 Template](https://github.com/0xShikhar/nex
 ### UI Components
 
 - **shadcn/ui**: High-quality, accessible UI components built with Radix UI and Tailwind CSS.
-- **Responsive Design**: Mobile-friendly layouts with Tailwind CSS.
 - **Dark Mode**: Seamless light/dark mode switching with next-themes.
 
 ### Backend Integration
@@ -93,7 +92,6 @@ This template uses Tailwind CSS for styling. You can customize the theme in `tai
    yarn dev
    ```
 
-
 ## Deployment
 
 ### Vercel
@@ -105,7 +103,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 3. Add your environment variables.
 4. Deploy!
 
-### Other Platforms
+### Other platforms
 
 You can also deploy to other platforms that support Next.js:
 

@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,19 +10,218 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
+// USER MODELS
 model User {
   id            String    @id @default(cuid())
   walletAddress String    @unique
   createdAt     DateTime  @default(now())
   lastLoginAt   DateTime? @updatedAt
-
-   // User profile information
-  username     String?   @unique
-  avatar       String?   // IPFS hash or URL
-  bio          String?
-  NFTid      String?
-
+  username      String?   @unique
+  avatar        String?
+  bio           String?
+  NFTid         String?
+  isVerified    Boolean   @default(false)
+  
+  watchlist     Watchlist[]
+  offers        Offer[]
+  analytics     DomainAnalytics[]
+  dealParticipations DealParticipation[]
+  notifications Notification[]
+  activities    Activity[]
+  
   @@index([walletAddress])
+  @@index([username])
+}
+
+// DOMAIN MODELS
+model Domain {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  tld             String
+  tokenId         String   @unique
+  owner           String
+  registrationDate DateTime?
+  expiryDate      DateTime?
+  isListed        Boolean  @default(false)
+  price           String?
+  currency        String   @default("ETH")
+  description     String?  @db.Text
+  keywords        String[]
+  ogImage         String?
+  views           Int      @default(0)
+  watchCount      Int      @default(0)
+  offerCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  watchlist       Watchlist[]
+  offers          Offer[]
+  analytics       DomainAnalytics[]
+  activities      Activity[]
+  deals           Deal[]
+  
+  @@index([name])
+  @@index([tokenId])
+  @@index([owner])
+  @@index([isListed])
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  domainId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, domainId])
+}
+
+// TRADING MODELS
+model Offer {
+  id          String   @id @default(cuid())
+  externalId  String   @unique
+  domainId    String
+  offerer     String
+  userId      String?
+  amount      String
+  currency    String   @default("ETH")
+  status      OfferStatus @default(ACTIVE)
+  expiryDate  DateTime
+  createdAt   DateTime @default(now())
+  
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([domainId])
+  @@index([status])
+}
+
+enum OfferStatus {
+  ACTIVE
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+// COMMUNITY DEALS
+model Deal {
+  id              String   @id @default(cuid())
+  domainId        String
+  creatorId       String
+  title           String
+  description     String?  @db.Text
+  targetPrice     String
+  minContribution String
+  maxParticipants Int      @default(10)
+  status          DealStatus @default(ACTIVE)
+  currentAmount   String   @default("0")
+  participantCount Int     @default(0)
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  createdAt       DateTime @default(now())
+  
+  domain          Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  participants    DealParticipation[]
+  
+  @@index([domainId])
+  @@index([status])
+}
+
+enum DealStatus {
+  ACTIVE
+  FUNDED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+model DealParticipation {
+  id              String   @id @default(cuid())
+  dealId          String
+  userId          String
+  contribution    String
+  createdAt       DateTime @default(now())
+  
+  deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([dealId, userId])
+}
+
+// ANALYTICS
+model DomainAnalytics {
+  id        String   @id @default(cuid())
+  domainId  String
+  userId    String?
+  event     AnalyticsEvent
+  metadata  Json?
+  timestamp DateTime @default(now())
+  
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([domainId])
+  @@index([event])
+}
+
+enum AnalyticsEvent {
+  PAGE_VIEW
+  DOMAIN_CLICK
+  OFFER_MADE
+  BUY_CLICK
+  MESSAGE_SENT
+  WATCHLIST_ADD
+  DEAL_CREATED
+}
+
+// ACTIVITY FEED
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String?
+  domainId    String?
+  type        ActivityType
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  domain      Domain?  @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  DOMAIN_LISTED
+  DOMAIN_SOLD
+  OFFER_MADE
+  DEAL_CREATED
+  DEAL_FUNDED
+}
+
+// NOTIFICATIONS
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+}
+
+enum NotificationType {
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  DOMAIN_SOLD
+  DEAL_FUNDED
+  MESSAGE_RECEIVED
 }
 

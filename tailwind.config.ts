@@ -91,10 +91,9 @@ const config = {
     			'accordion-up': 'accordion-up 0.2s ease-out'
     		},
     		backgroundImage: {
-    			'grid-pattern': 'url('/grid.svg',
-    			')': ',
-    			'grid-pattern-light': 'url('/grid-light.svg'
-    		}
+    			'grid-pattern': 'url("/grid.svg")',
+    			'grid-pattern-light': 'url("/grid-light.svg")'
+    		},
     	}
     },
 	plugins: [require("tailwindcss-animate")],
