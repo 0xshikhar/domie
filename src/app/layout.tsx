@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/app/providers"
 import Navbar from "@/components/layout/Navbar"
+import Footer from "@/components/layout/Footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             <main className="flex-1">
               {children}
             </main>
+            <Footer />
           </Providers>
         </ThemeProvider>
       </body>
