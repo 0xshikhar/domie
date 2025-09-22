@@ -40,6 +40,7 @@
     "@xmtp/content-type-reply": "^2.0.2",
     "@xmtp/content-type-text": "^2.0.2",
     "alert": "^6.0.2",
+    "axios": "^1.12.2",
     "badge": "^1.0.3",
     "button": "^1.1.1",
     "card": "^2.5.4",

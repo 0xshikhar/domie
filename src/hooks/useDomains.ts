@@ -1,40 +1,64 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { Domain } from '@/lib/doma/types';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { fetchNames, fetchName, fetchOffers, fetchNameStatistics } from '@/lib/doma/client';
 
 interface UseDomainsOptions {
   search?: string;
   isListed?: boolean;
   limit?: number;
-  offset?: number;
+  tlds?: string[];
 }
 
 export function useDomains(options: UseDomainsOptions = {}) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['domains', options],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (options.search) params.append('search', options.search);
-      if (options.isListed !== undefined) params.append('isListed', String(options.isListed));
-      if (options.limit) params.append('limit', String(options.limit));
-      if (options.offset) params.append('offset', String(options.offset));
-
-      const response = await fetch(`/api/domains?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch domains');
-      return response.json();
+    queryFn: async ({ pageParam = 0 }) => {
+      return await fetchNames({
+        skip: pageParam,
+        take: options.limit || 20,
+        name: options.search || undefined,
+        listed: options.isListed,
+        tlds: options.tlds || undefined,
+      });
     },
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasNextPage ? lastPage.currentPage * (options.limit || 20) : undefined;
+    },
+    initialPageParam: 0,
   });
 }
 
-export function useDomain(id: string) {
+export function useDomain(name: string) {
   return useQuery({
-    queryKey: ['domain', id],
+    queryKey: ['domain', name],
     queryFn: async () => {
-      const response = await fetch(`/api/domains/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch domain');
-      return response.json() as Promise<Domain>;
+      return await fetchName(name);
     },
-    enabled: !!id,
+    enabled: !!name,
+  });
+}
+
+export function useDomainOffers(tokenId: string, limit = 20) {
+  return useInfiniteQuery({
+    queryKey: ['domain-offers', tokenId],
+    queryFn: async ({ pageParam = 0 }) => {
+      return await fetchOffers(tokenId, pageParam, limit);
+    },
+    getNextPageParam: (lastPage) => {
+      return lastPage.hasNextPage ? lastPage.currentPage * limit : undefined;
+    },
+    initialPageParam: 0,
+    enabled: !!tokenId,
+  });
+}
+
+export function useDomainStats(tokenId: string) {
+  return useQuery({
+    queryKey: ['domain-stats', tokenId],
+    queryFn: async () => {
+      return await fetchNameStatistics(tokenId);
+    },
+    enabled: !!tokenId,
   });
 }
