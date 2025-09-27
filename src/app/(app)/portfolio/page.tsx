@@ -28,7 +28,7 @@ interface PortfolioData {
 
 export default function PortfolioPage() {
   const { authenticated, login, user } = usePrivy();
-  const [activeTab, setActiveTab] = useState('owned');
+  const [activeTab, setActiveTab] = useState('offers');
   const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 

@@ -13,18 +13,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Normalize address to lowercase for consistency
-        const normalizedAddress = walletAddress.toLowerCase().trim();
+        // Use original address to preserve checksum
+        const address = walletAddress.trim();
 
-        // Check if user already exists
-        let user = await prisma.user.findUnique({
-            where: { walletAddress: normalizedAddress },
+        // Check if user already exists (case-insensitive)
+        let user = await prisma.user.findFirst({
+            where: { 
+                walletAddress: {
+                    equals: address,
+                    mode: 'insensitive',
+                },
+            },
         });
 
         if (user) {
             // Update last login time
             user = await prisma.user.update({
-                where: { walletAddress: normalizedAddress },
+                where: { id: user.id },
                 data: { lastLoginAt: new Date() },
             });
 
@@ -35,15 +40,15 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Create new user
+        // Create new user with original address
         user = await prisma.user.create({
             data: {
-                walletAddress: normalizedAddress,
+                walletAddress: address,
                 lastLoginAt: new Date(),
             },
         });
 
-        console.log(`Created new user profile for address: ${normalizedAddress}`);
+        console.log(`Created new user profile for address: ${address}`);
 
         return NextResponse.json({
             success: true,

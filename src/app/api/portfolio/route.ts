@@ -13,15 +13,21 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const normalizedAddress = walletAddress.toLowerCase().trim();
+        // Use original address without lowercasing to preserve checksum
+        const address = walletAddress.trim();
         
         console.log('=== PORTFOLIO API DEBUG ===');
         console.log('Requested wallet address:', walletAddress);
-        console.log('Normalized address:', normalizedAddress);
+        console.log('Using address:', address);
 
-        // Get user from database
-        const user = await prisma.user.findUnique({
-            where: { walletAddress: normalizedAddress },
+        // Get user from database (case-insensitive search)
+        const user = await prisma.user.findFirst({
+            where: { 
+                walletAddress: {
+                    equals: address,
+                    mode: 'insensitive',
+                },
+            },
             include: {
                 watchlist: {
                     include: {
@@ -61,7 +67,10 @@ export async function GET(request: NextRequest) {
         // Get owned domains (domains where user is the owner)
         const ownedDomains = await prisma.domain.findMany({
             where: {
-                owner: normalizedAddress,
+                owner: {
+                    equals: address,
+                    mode: 'insensitive',
+                },
             },
             orderBy: {
                 createdAt: 'desc',
@@ -70,12 +79,12 @@ export async function GET(request: NextRequest) {
 
         // Get offers made by this wallet address (using offerer field)
         // This catches offers even if userId wasn't set
-        console.log('Querying offers with offerer:', normalizedAddress);
+        console.log('Querying offers with offerer:', address);
         
         const offersMadeByAddress = await prisma.offer.findMany({
             where: {
                 offerer: {
-                    equals: normalizedAddress,
+                    equals: address,
                     mode: 'insensitive', // Case-insensitive comparison
                 },
             },
@@ -97,31 +106,15 @@ export async function GET(request: NextRequest) {
                 amount: offersMadeByAddress[0].amount,
             });
         }
-        
-        // Also try querying without case sensitivity for debugging
-        const allOffersDebug = await prisma.offer.findMany({
-            include: {
-                domain: true,
-                user: true,
-            },
-        });
-        
-        console.log('Total offers in database:', allOffersDebug.length);
-        console.log('Offers with matching address (case-insensitive):', 
-            allOffersDebug.filter(o => o.offerer.toLowerCase() === normalizedAddress).length
-        );
-        
-        if (allOffersDebug.length > 0) {
-            console.log('Sample offerer addresses in DB:', 
-                allOffersDebug.slice(0, 3).map(o => o.offerer)
-            );
-        }
 
         // Get offers received on owned domains
         const receivedOffers = await prisma.offer.findMany({
             where: {
                 domain: {
-                    owner: normalizedAddress,
+                    owner: {
+                        equals: address,
+                        mode: 'insensitive',
+                    },
                 },
             },
             include: {
@@ -144,7 +137,7 @@ export async function GET(request: NextRequest) {
             expiryDate: o.expiryDate,
             createdAt: o.createdAt,
             type: 'made' as const,
-            offerer: normalizedAddress,
+            offerer: address,
         }));
 
         const offersReceived = receivedOffers.map((o) => ({

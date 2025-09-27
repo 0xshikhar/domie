@@ -28,7 +28,8 @@ export async function syncDomainToDatabase(params: SyncDomainParams) {
     } = params;
 
     try {
-        const normalizedOwner = owner.toLowerCase();
+        // Use original owner address to preserve checksum
+        const ownerAddress = owner.trim();
 
         // Check if domain exists
         const existingDomain = await prisma.domain.findUnique({
@@ -40,7 +41,7 @@ export async function syncDomainToDatabase(params: SyncDomainParams) {
             const updatedDomain = await prisma.domain.update({
                 where: { tokenId },
                 data: {
-                    owner: normalizedOwner,
+                    owner: ownerAddress,
                     isListed,
                     price: price || null,
                     currency,
@@ -55,7 +56,7 @@ export async function syncDomainToDatabase(params: SyncDomainParams) {
                     name,
                     tld,
                     tokenId,
-                    owner: normalizedOwner,
+                    owner: ownerAddress,
                     isListed,
                     price: price || null,
                     currency,
