@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/app/providers"
 import Navbar from "@/components/layout/Navbar"
 import Footer from "@/components/layout/Footer"
+import { Toaster } from "sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -87,6 +88,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
               {children}
             </main>
             <Footer />
+            {/* Global toast notifications */}
+            <Toaster richColors position="top-right" />
           </Providers>
         </ThemeProvider>
       </body>

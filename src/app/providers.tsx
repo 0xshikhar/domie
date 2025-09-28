@@ -7,7 +7,6 @@ import {
     QueryClientProvider,
     QueryClient,
 } from "@tanstack/react-query";
-import 'dotenv/config';
 
 import {
     mainnet,

@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Eye, Heart, MessageCircle, Share2, TrendingUp } from 'lucide-react';
+import { Eye, Heart, MessageCircle, Share2, TrendingUp, Copy, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 import { Domain } from '@/lib/doma/types';
 import BuyNowModal from '@/components/trading/BuyNowModal';
 import MakeOfferModal from '@/components/trading/MakeOfferModal';
+import { toast } from 'sonner';
 
 interface DomainLandingPageProps {
   domain: Domain & {
@@ -22,6 +23,14 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    toast.success(`${fieldName} copied to clipboard`);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -125,22 +134,79 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                   <CardTitle>Domain Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Token ID - Full Display */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">Token ID</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(domain.tokenId, 'Token ID')}
+                        className="h-8"
+                      >
+                        {copiedField === 'Token ID' ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="font-mono text-sm bg-muted p-3 rounded-md break-all">
+                      {domain.tokenId}
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Owner - Full Display */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">Owner</p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(domain.owner, 'Owner Address')}
+                          className="h-8"
+                        >
+                          {copiedField === 'Owner Address' ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="h-8"
+                        >
+                          <a
+                            href={`https://etherscan.io/address/${domain.owner}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="font-mono text-sm bg-muted p-3 rounded-md break-all">
+                      {domain.owner}
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  {/* Additional Info Grid */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Token ID</p>
-                      <p className="font-mono">{domain.tokenId}</p>
+                      <p className="text-sm text-muted-foreground mb-1">TLD</p>
+                      <p className="font-semibold text-lg">.{domain.tld}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Owner</p>
-                      <p className="font-mono">{domain.owner.slice(0, 10)}...</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">TLD</p>
-                      <p className="font-semibold">.{domain.tld}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant={domain.isListed ? 'default' : 'secondary'}>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <Badge variant={domain.isListed ? 'default' : 'secondary'} className="text-sm">
                         {domain.isListed ? 'Listed' : 'Not Listed'}
                       </Badge>
                     </div>
@@ -162,6 +228,35 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                 </CardContent>
               </Card>
 
+              {/* Domain Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Domain Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Domain Name</p>
+                      <p className="font-semibold">{domain.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Transfer Lock</p>
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm">Disabled</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Fractionalized</p>
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm">No</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Why This Domain */}
               <Card>
                 <CardHeader>
@@ -169,20 +264,20 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">✓</span>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                       <span>Short, memorable, and brandable</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">✓</span>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                       <span>Perfect for Web3 identity and branding</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">✓</span>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                       <span>Verified ownership on blockchain</span>
                     </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">✓</span>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                       <span>Instant transfer upon purchase</span>
                     </li>
                   </ul>
@@ -192,17 +287,97 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
 
             {/* Right Column - Actions & Info */}
             <div className="space-y-6">
-              {/* Contact Owner */}
+              {/* Registrar Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Owner</CardTitle>
-                  <CardDescription>Start a conversation via XMTP</CardDescription>
+                  <CardTitle>Registrar</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Name</p>
+                    <p className="font-semibold">D3 Registrar</p>
+                  </div>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">IANA ID</p>
+                    <p className="font-mono text-sm">3784</p>
+                  </div>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Website</p>
+                    <Button variant="link" className="h-auto p-0" asChild>
+                      <a href="#" target="_blank" rel="noopener noreferrer">
+                        Visit
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Owner Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Owner</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-semibold">
+                        {domain.owner.slice(2, 4).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-sm truncate">{domain.owner}</p>
+                      <p className="text-xs text-muted-foreground">Domain Owner</p>
+                    </div>
+                  </div>
                   <Button className="w-full" variant="outline">
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Send Message
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Tokens */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tokens</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Network</p>
+                      <p className="font-semibold text-sm">Doma Testnet</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Token ID</p>
+                      <p className="font-mono text-xs truncate">{domain.tokenId.slice(0, 12)}...</p>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Owner</p>
+                      <p className="font-mono text-xs truncate">{domain.owner.slice(0, 10)}...</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Created</p>
+                      <p className="text-sm">an hour ago</p>
+                    </div>
+                  </div>
+                  {domain.isListed && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Active Listings</p>
+                        <div className="bg-muted p-3 rounded-md">
+                          <p className="text-xs text-muted-foreground mb-1">Orderbook: DOMA</p>
+                          <p className="font-semibold">{domain.price} {domain.currency}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -217,31 +392,6 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                     <Share2 className="h-4 w-4 mr-2" />
                     Share Domain
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Listed</span>
-                      <span>2 days ago</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last offer</span>
-                      <span>5 hours ago</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Views today</span>
-                      <span>127</span>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>

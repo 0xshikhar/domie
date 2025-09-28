@@ -6,31 +6,114 @@ interface GraphResponse<T> {
 }
 
 // Create axios client for DOMA GraphQL API
+const isBrowser = typeof window !== 'undefined';
+const serverApiKey = process.env.DOMA_API_KEY || process.env.NEXT_PUBLIC_DOMA_API_KEY || '';
+const serverGraphUrl = process.env.NEXT_PUBLIC_DOMA_GRAPHQL_URL || 'https://api.doma.dev/graphql';
+
+const baseURL = isBrowser
+  ? '/api/doma/graphql' // use Next.js proxy in browser to avoid CORS/DNS and hide key
+  : (serverApiKey ? serverGraphUrl : '/api/doma/graphql');
+
+const defaultHeaders: Record<string, string> = {};
+if (!isBrowser && serverApiKey) {
+  // Only attach API key on the server (private)
+  defaultHeaders['api-key'] = serverApiKey;
+}
+
 export const domaQLClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_DOMA_GRAPHQL_URL || 'https://api.doma.dev/graphql',
-  headers: {
-    'api-key': process.env.NEXT_PUBLIC_DOMA_API_KEY || '',
-  },
+  baseURL,
+  headers: defaultHeaders,
 });
+
+// Debug logging flag (enabled in non-production by default)
+const DOMA_DEBUG = (process.env.NEXT_PUBLIC_DOMA_DEBUG ?? '').toLowerCase() === 'true' || process.env.NODE_ENV !== 'production';
+
+// Mask API key for logs
+function maskKey(key?: string) {
+  if (!key) return 'MISSING';
+  if (key.length <= 8) return '********';
+  return `${key.slice(0, 4)}…${key.slice(-4)}`;
+}
+
+// Axios interceptors for request/response logging
+domaQLClient.interceptors.request.use((config) => {
+  if (DOMA_DEBUG) {
+    const hdrs = { ...(config.headers as Record<string, unknown>) };
+    if (hdrs['api-key']) hdrs['api-key'] = maskKey(String(hdrs['api-key']));
+    // Avoid logging full query to keep console clean; log op name if available
+    let op = '';
+    try {
+      const body = config.data as { query?: string };
+      op = body?.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2] || '';
+    } catch {}
+    // eslint-disable-next-line no-console
+    console.debug('[DOMA][request]', {
+      url: `${config.baseURL ?? ''}${config.url ?? ''}`,
+      method: config.method,
+      operation: op,
+      headers: hdrs,
+    });
+  }
+  return config;
+});
+
+domaQLClient.interceptors.response.use(
+  (response) => {
+    if (DOMA_DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug('[DOMA][response]', {
+        status: response.status,
+        url: `${response.config.baseURL ?? ''}${response.config.url ?? ''}`,
+      });
+    }
+    return response;
+  },
+  (error) => {
+    if (DOMA_DEBUG) {
+      // eslint-disable-next-line no-console
+      console.error('[DOMA][error]', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        url: `${error?.config?.baseURL ?? ''}${error?.config?.url ?? ''}`,
+      });
+    }
+    return Promise.reject(error);
+  }
+);
 
 // GraphQL request helper
 export async function graphRequest<T>(
   query: string,
   variables?: Record<string, string | number | boolean | object | null | string[]>
 ): Promise<T> {
-  const res = await domaQLClient.post('/', { query, variables });
+  const op = query.match(/\b(query|mutation)\s+(\w+)/)?.[2] || 'UnknownOp';
+  try {
+    const res = await domaQLClient.post('', { query, variables });
 
-  if (res.status !== 200) {
-    throw new Error(`GraphQL request failed with status ${res.status}`);
+    if (res.status !== 200) {
+      throw new Error(`GraphQL request failed with status ${res.status} [${op}]`);
+    }
+
+    const data = res.data as GraphResponse<T>;
+
+    if (data.errors && data.errors.length) {
+      throw new Error(`${op}: ${data.errors.map((e) => e.message).join('; ')}`);
+    }
+
+    if (DOMA_DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug('[DOMA][data]', { operation: op, hasData: !!data.data });
+    }
+
+    return data.data as T;
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const detail = err?.response?.data?.errors?.map((e: any) => e?.message).join('; ') || err?.message;
+    // eslint-disable-next-line no-console
+    console.error(`[DOMA] GraphQL ${op} failed`, { status, detail, variables });
+    throw new Error(detail || `GraphQL ${op} failed`);
   }
-
-  const data = res.data as GraphResponse<T>;
-
-  if (data.errors && data.errors.length) {
-    throw new Error(data.errors.map((e) => e.message).join('; '));
-  }
-
-  return data.data as T;
 }
 
 // GraphQL queries matching DOMA API schema
