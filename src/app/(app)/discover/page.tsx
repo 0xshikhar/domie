@@ -16,6 +16,9 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import BuyNowModal from '@/components/trading/BuyNowModal';
+import MakeOfferModal from '@/components/trading/MakeOfferModal';
+import type { Domain } from '@/lib/doma/types';
 
 export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,6 +26,11 @@ export default function DiscoverPage() {
   const [showListedOnly, setShowListedOnly] = useState(true);
   const [selectedTLD, setSelectedTLD] = useState<string>('All');
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  
+  // Modal states
+  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
 
   const tldOptions = ['All', 'com', 'ai', 'io'];
 
@@ -256,11 +264,57 @@ export default function DiscoverPage() {
                           </div>
                         </div>
 
-                        {/* Action Button */}
+                        {/* Action Buttons */}
                         <div className="mt-4 pt-4 border-t">
-                          <Button className="w-full" variant={hasListings ? 'default' : 'outline'}>
-                            {hasListings ? 'Buy or Make Offer' : 'Make Offer'}
-                          </Button>
+                          <div className="flex gap-2">
+                            {hasListings && (
+                              <Button 
+                                className="flex-1" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const domain: Domain = {
+                                    id: nameData.name,
+                                    name: nameData.name,
+                                    tld: tld,
+                                    tokenId: token?.tokenId || nameData.name,
+                                    owner: token?.ownerAddress || '0x',
+                                    isListed: hasListings,
+                                    price: price,
+                                    currency: currency,
+                                    tokens: nameData.tokens,
+                                  };
+                                  setSelectedDomain(domain);
+                                  setShowBuyModal(true);
+                                }}
+                              >
+                                Buy Now
+                              </Button>
+                            )}
+                            <Button 
+                              className="flex-1" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const domain: Domain = {
+                                  id: nameData.name,
+                                  name: nameData.name,
+                                  tld: tld,
+                                  tokenId: token?.tokenId || nameData.name,
+                                  owner: token?.ownerAddress || '0x',
+                                  isListed: hasListings,
+                                  price: price,
+                                  currency: currency,
+                                  tokens: nameData.tokens,
+                                };
+                                setSelectedDomain(domain);
+                                setShowOfferModal(true);
+                              }}
+                            >
+                              Make Offer
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -300,6 +354,28 @@ export default function DiscoverPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {selectedDomain && (
+        <>
+          <BuyNowModal
+            open={showBuyModal}
+            onClose={() => {
+              setShowBuyModal(false);
+              setSelectedDomain(null);
+            }}
+            domain={selectedDomain}
+          />
+          <MakeOfferModal
+            open={showOfferModal}
+            onClose={() => {
+              setShowOfferModal(false);
+              setSelectedDomain(null);
+            }}
+            domain={selectedDomain}
+          />
+        </>
+      )}
     </div>
   );
 }

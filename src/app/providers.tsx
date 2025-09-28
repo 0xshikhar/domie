@@ -8,22 +8,45 @@ import {
     QueryClient,
 } from "@tanstack/react-query";
 
-import {
-    mainnet,
-    sepolia
-} from 'wagmi/chains';
-import { agentChain } from '@/lib/customChain';
+import { sepolia } from 'wagmi/chains';
+import { defineChain } from 'viem';
 import { createConfig } from 'wagmi';
 import { http } from 'viem';
 import { XMTPProvider } from '@/components/messaging/XMTPProvider';
 
-// Configure wagmi client
+// Define Doma Testnet chain
+const domaTestnet = defineChain({
+    id: 97476,
+    name: 'Doma Testnet',
+    network: 'doma-testnet',
+    nativeCurrency: {
+        name: 'Ethereum',
+        symbol: 'ETH',
+        decimals: 18,
+    },
+    rpcUrls: {
+        default: {
+            http: ['https://rpc-testnet.doma.xyz'],
+        },
+        public: {
+            http: ['https://rpc-testnet.doma.xyz'],
+        },
+    },
+    blockExplorers: {
+        default: {
+            name: 'Doma Explorer',
+            url: 'https://explorer-testnet.doma.xyz',
+        },
+    },
+    testnet: true,
+});
+
+// Configure wagmi client with only Sepolia and Doma Testnet
 const config = createConfig({
-    chains: [mainnet, sepolia, agentChain],
+    chains: [sepolia, domaTestnet],
     transports: {
-        [mainnet.id]: http(),
         [sepolia.id]: http(),
-        [agentChain.id]: http(),
+        [domaTestnet.id]: http('https://rpc-testnet.doma.xyz'),
     },
 });
 
@@ -50,6 +73,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         embeddedWallets: {
                             createOnLogin: 'users-without-wallets',
                         },
+                        supportedChains: [sepolia, domaTestnet],
                     }}
                 >
                     <XMTPProvider>

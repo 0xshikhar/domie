@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,7 @@ import { Domain } from '@/lib/doma/types';
 import BuyNowModal from '@/components/trading/BuyNowModal';
 import MakeOfferModal from '@/components/trading/MakeOfferModal';
 import { toast } from 'sonner';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface DomainLandingPageProps {
   domain: Domain & {
@@ -20,6 +22,8 @@ interface DomainLandingPageProps {
 }
 
 export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
+  const router = useRouter();
+  const { authenticated, login } = usePrivy();
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
@@ -48,6 +52,17 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
   const handleWatch = () => {
     setIsWatching(!isWatching);
     // TODO: Add to watchlist in database
+  };
+
+  const handleContactOwner = () => {
+    if (!authenticated) {
+      login();
+      toast.info('Please connect your wallet to message the owner');
+      return;
+    }
+    // Navigate to messages page with the owner's address as a query param
+    router.push(`/messages?peer=${domain.owner}`);
+    toast.success('Opening chat with domain owner...');
   };
 
   return (
@@ -100,29 +115,40 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                     <span className="text-2xl text-muted-foreground">{domain.currency}</span>
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <Button 
+                        size="lg" 
+                        className="flex-1"
+                        onClick={() => setShowBuyModal(true)}
+                        disabled={!domain.isListed}
+                      >
+                        Buy Now
+                      </Button>
+                      <Button 
+                        size="lg" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setShowOfferModal(true)}
+                      >
+                        Make Offer
+                      </Button>
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        onClick={handleWatch}
+                      >
+                        <Heart className={`h-5 w-5 ${isWatching ? 'fill-current text-red-500' : ''}`} />
+                      </Button>
+                    </div>
                     <Button 
                       size="lg" 
-                      className="flex-1"
-                      onClick={() => setShowBuyModal(true)}
-                      disabled={!domain.isListed}
+                      variant="secondary" 
+                      className="w-full"
+                      onClick={handleContactOwner}
                     >
-                      Buy Now
-                    </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => setShowOfferModal(true)}
-                    >
-                      Make Offer
-                    </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      onClick={handleWatch}
-                    >
-                      <Heart className={`h-5 w-5 ${isWatching ? 'fill-current text-red-500' : ''}`} />
+                      <MessageCircle className="h-5 w-5 mr-2" />
+                      Contact Owner
                     </Button>
                   </div>
                 </CardContent>
@@ -182,7 +208,7 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                           className="h-8"
                         >
                           <a
-                            href={`https://etherscan.io/address/${domain.owner}`}
+                            href={`https://explorer-testnet.doma.xyz/address/${domain.owner}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

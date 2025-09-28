@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
 import { Domain } from '@/lib/doma/types';
 import { usePrivy } from '@privy-io/react-auth';
+import { useWalletClient } from 'wagmi';
+import { parseEther } from 'viem';
+import { toast } from 'sonner';
 
 interface MakeOfferModalProps {
   open: boolean;
@@ -18,16 +21,23 @@ interface MakeOfferModalProps {
 }
 
 export default function MakeOfferModal({ open, onClose, domain }: MakeOfferModalProps) {
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
+  const { data: walletClient } = useWalletClient();
   const [offerAmount, setOfferAmount] = useState('');
   const [duration, setDuration] = useState('7');
   const [isProcessing, setIsProcessing] = useState(false);
   const [offerId, setOfferId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   const handleSubmitOffer = async () => {
     if (!authenticated) {
       login();
+      return;
+    }
+
+    if (!walletClient) {
+      setError('Wallet not connected');
       return;
     }
 
@@ -40,21 +50,64 @@ export default function MakeOfferModal({ open, onClose, domain }: MakeOfferModal
     setError(null);
 
     try {
-      // TODO: Implement actual offer logic with DOMA orderbook
-      // const offer = await orderbook.createOffer({
-      //   tokenId: domain.tokenId,
-      //   amount: parseEther(offerAmount),
-      //   duration: parseInt(duration) * 24 * 60 * 60,
-      // });
+      const durationDays = parseInt(duration);
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + durationDays);
+
+      // Create offer in the backend
+      const response = await fetch('/api/offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          externalId: `offer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          domainId: domain.id,
+          offerer: user?.wallet?.address,
+          userId: user?.wallet?.address,
+          amount: offerAmount,
+          currency: 'ETH',
+          expiryDate: expiryDate.toISOString(),
+          // Additional domain info for upsert
+          domainName: domain.name,
+          domainOwner: domain.owner,
+          domainPrice: domain.price,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create offer');
+      }
+
+      const offerData = await response.json();
+      setOfferId(offerData.id);
       
-      // Simulate offer creation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setOfferId('offer_' + Math.random().toString(36).substr(2, 9));
+      // In a real implementation, you might also need to:
+      // 1. Sign the offer with the wallet
+      // 2. Submit it to the DOMA orderbook contract
+      // 3. Lock funds in escrow (depending on orderbook design)
       
+      toast.success(`Offer of ${offerAmount} ETH submitted successfully!`);
+
       // Track analytics
-      // await trackEvent('OFFER_MADE', domain.id, { amount: offerAmount });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create offer');
+      try {
+        await fetch('/api/analytics/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'OFFER_MADE',
+            domainId: domain.id,
+            userId: user?.wallet?.address,
+            metadata: { amount: offerAmount, duration: durationDays }
+          })
+        });
+      } catch (analyticsError) {
+        console.error('Analytics tracking failed:', analyticsError);
+      }
+    } catch (err: any) {
+      console.error('Offer error:', err);
+      const errorMsg = err?.message || 'Failed to create offer';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsProcessing(false);
     }
@@ -66,6 +119,7 @@ export default function MakeOfferModal({ open, onClose, domain }: MakeOfferModal
     setOfferId(null);
     setError(null);
     setIsProcessing(false);
+    setTxHash(null);
     onClose();
   };
 

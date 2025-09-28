@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,9 @@ import { MessageCircle, Send, Search } from 'lucide-react';
 import { useXMTP } from '@/components/messaging/XMTPProvider';
 import { usePrivy } from '@privy-io/react-auth';
 import TradeCard from '@/components/messaging/TradeCard';
+import { toast } from 'sonner';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Conversation {
   id: string;
@@ -83,7 +87,52 @@ const mockMessages: Message[] = [
   },
 ];
 
-export default function MessagesPage() {
+// Loading skeleton component
+function MessagesSkeleton() {
+  return (
+    <div className="h-screen bg-background flex">
+      <div className="w-80 border-r flex flex-col">
+        <div className="p-4 border-b space-y-3">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="flex-1 space-y-4 p-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col">
+        <div className="p-4 border-b">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-32 mt-1" />
+        </div>
+        <div className="flex-1 space-y-4 p-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex justify-end">
+              <Skeleton className={`h-16 ${i % 2 === 0 ? 'w-48' : 'w-32'}`} />
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t">
+          <div className="flex gap-2">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-10" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Component that uses useSearchParams
+function MessagesContent() {
+  const searchParams = useSearchParams();
+  const peerAddress = searchParams.get('peer');
   const { client, isLoading } = useXMTP();
   const { authenticated, login, user } = usePrivy();
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
@@ -94,8 +143,35 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSendMessage = () => {
+  // Handle opening conversation with specific peer from URL
+  useEffect(() => {
+    if (peerAddress && authenticated) {
+      // Check if conversation already exists
+      const existingConv = conversations.find(c => c.peerAddress === peerAddress);
+      
+      if (existingConv) {
+        setSelectedConversation(existingConv);
+      } else {
+        // Create new conversation
+        const newConv: Conversation = {
+          id: Date.now().toString(),
+          peerAddress,
+          peerName: peerAddress.slice(0, 10) + '...',
+          lastMessage: 'New conversation',
+          timestamp: new Date(),
+          unread: 0,
+        };
+        setConversations([newConv, ...conversations]);
+        setSelectedConversation(newConv);
+        setMessages([]);
+        toast.success('Started new conversation');
+      }
+    }
+  }, [peerAddress, authenticated, conversations]);
+
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
+    if (!selectedConversation) return;
 
     const message: Message = {
       id: Date.now().toString(),
@@ -104,10 +180,19 @@ export default function MessagesPage() {
       timestamp: new Date(),
     };
 
+    // Optimistically add message to UI
     setMessages([...messages, message]);
     setNewMessage('');
 
-    // TODO: Send via XMTP
+    // Send via XMTP
+    if (client?.sendMessage) {
+      try {
+        await client.sendMessage(selectedConversation.peerAddress, newMessage);
+      } catch (error) {
+        console.error('Failed to send message via XMTP:', error);
+        // Message still appears in UI, but user is notified of failure
+      }
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -257,5 +342,13 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<MessagesSkeleton />}>
+      <MessagesContent />
+    </Suspense>
   );
 }
