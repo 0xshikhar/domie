@@ -203,7 +203,7 @@ export default function PortfolioPage() {
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No domains owned</h3>
                   <p className="text-muted-foreground mb-4">
-                    You don't own any domains yet. Browse the marketplace to find your perfect domain.
+                    You don&apos;t own any domains yet. Browse the marketplace to find your perfect domain.
                   </p>
                   <Link href="/discover">
                     <Button>Browse Domains</Button>
@@ -303,7 +303,7 @@ export default function PortfolioPage() {
                   <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No offers</h3>
                   <p className="text-muted-foreground mb-4">
-                    You haven't made or received any offers yet.
+                    You haven&apos;t made or received any offers yet.
                   </p>
                   <Link href="/discover">
                     <Button>Browse Domains</Button>
