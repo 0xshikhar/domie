@@ -12,6 +12,7 @@ const protectedPaths = [
 // Add this list for paths that should bypass token verification
 const publicPaths = [
     '/api/user/check',
+    '/api/user/sync',
     '/api/auth/login',
 ];
 

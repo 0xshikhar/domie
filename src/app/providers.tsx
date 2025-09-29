@@ -13,6 +13,7 @@ import { defineChain } from 'viem';
 import { createConfig } from 'wagmi';
 import { http } from 'viem';
 import { XMTPProvider } from '@/components/messaging/XMTPProvider';
+import { UserSyncWrapper } from '@/components/UserSyncWrapper';
 
 // Define Doma Testnet chain
 const domaTestnet = defineChain({
@@ -76,15 +77,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         supportedChains: [sepolia, domaTestnet],
                     }}
                 >
-                    <XMTPProvider>
-                        {mounted ? (
-                            children
-                        ) : (
-                            <div style={{ visibility: "hidden" }}>
-                                {children}
-                            </div>
-                        )}
-                    </XMTPProvider>
+                    <UserSyncWrapper>
+                        <XMTPProvider>
+                            {mounted ? (
+                                children
+                            ) : (
+                                <div style={{ visibility: "hidden" }}>
+                                    {children}
+                                </div>
+                            )}
+                        </XMTPProvider>
+                    </UserSyncWrapper>
                 </PrivyProvider>
             </QueryClientProvider>
         </WagmiProvider>

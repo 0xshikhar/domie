@@ -2,6 +2,28 @@
 import { usePrivy } from '@privy-io/react-auth';
 import { useCallback, useEffect, useState } from 'react';
 
+// Helper function to sync user to database
+async function syncUserToDatabase(walletAddress: string) {
+    try {
+        const response = await fetch('/api/user/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ walletAddress }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to sync user profile');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error syncing user to database:', error);
+        throw error;
+    }
+}
+
 export function useAuth() {
     const {
         login: privyLogin,
