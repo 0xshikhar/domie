@@ -14,6 +14,8 @@ const publicPaths = [
     '/api/user/check',
     '/api/user/sync',
     '/api/auth/login',
+    '/api/portfolio',
+    '/api/watchlist',
 ];
 
 export default async function middleware(request: NextRequest) {

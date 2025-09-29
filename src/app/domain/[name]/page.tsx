@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import DomainLandingPage from '@/components/domain/DomainLandingPage';
 import { fetchName } from '@/lib/doma/client';
 import { formatUnits } from 'viem';
+import { getOrCreateDomain } from '@/lib/syncDomain';
 
 interface DomainPageProps {
   params: {
@@ -88,8 +89,8 @@ export default async function DomainPage({ params }: DomainPageProps) {
     // Parse owner address from CAIP10 format
     const ownerAddress = nameData.claimedBy?.split(':').pop() || 'Unknown';
 
-    const domain = {
-      id: token?.tokenId || '1',
+    // Sync domain to database and get the database record
+    const dbDomain = await getOrCreateDomain({
       name: domainName,
       tld,
       tokenId: token?.tokenId || '',
@@ -98,9 +99,21 @@ export default async function DomainPage({ params }: DomainPageProps) {
       price: price || '0',
       currency,
       description: `Premium ${domainName} domain`,
-      views: 0, // TODO: Fetch from analytics
-      watchCount: 0, // TODO: Fetch from database
-      offerCount: 0, // TODO: Fetch from offers API
+    });
+
+    const domain = {
+      id: dbDomain.id, // Use database ID for watchlist/offers
+      name: domainName,
+      tld,
+      tokenId: token?.tokenId || '',
+      owner: ownerAddress,
+      isListed: hasListings,
+      price: price || '0',
+      currency,
+      description: dbDomain.description || `Premium ${domainName} domain`,
+      views: dbDomain.views,
+      watchCount: dbDomain.watchCount,
+      offerCount: dbDomain.offerCount,
     };
 
     // Add structured data for SEO

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,11 +23,12 @@ interface DomainLandingPageProps {
 
 export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
   const router = useRouter();
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isCheckingWatchlist, setIsCheckingWatchlist] = useState(false);
 
   const copyToClipboard = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -49,9 +50,74 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
     }
   };
 
-  const handleWatch = () => {
-    setIsWatching(!isWatching);
-    // TODO: Add to watchlist in database
+  // Check if domain is in watchlist on mount
+  useEffect(() => {
+    const checkWatchlist = async () => {
+      if (!authenticated || !user?.wallet?.address) return;
+
+      setIsCheckingWatchlist(true);
+      try {
+        const response = await fetch(
+          `/api/watchlist?address=${user.wallet.address}&domainId=${domain.id}`
+        );
+        const data = await response.json();
+        setIsWatching(data.isWatching || false);
+      } catch (error) {
+        console.error('Error checking watchlist:', error);
+      } finally {
+        setIsCheckingWatchlist(false);
+      }
+    };
+
+    checkWatchlist();
+  }, [authenticated, user?.wallet?.address, domain.id]);
+
+  const handleWatch = async () => {
+    if (!authenticated) {
+      login();
+      toast.info('Please connect your wallet to add to watchlist');
+      return;
+    }
+
+    if (!user?.wallet?.address) return;
+
+    try {
+      if (isWatching) {
+        // Remove from watchlist
+        const response = await fetch(
+          `/api/watchlist?address=${user.wallet.address}&domainId=${domain.id}`,
+          { method: 'DELETE' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to remove from watchlist');
+        }
+
+        setIsWatching(false);
+        toast.success('Removed from watchlist');
+      } else {
+        // Add to watchlist
+        const response = await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            walletAddress: user.wallet.address,
+            domainId: domain.id,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to add to watchlist');
+        }
+
+        setIsWatching(true);
+        toast.success('Added to watchlist');
+      }
+    } catch (error) {
+      console.error('Error updating watchlist:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update watchlist');
+    }
   };
 
   const handleContactOwner = () => {
