@@ -9,14 +9,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useCommunityDeal } from '@/hooks/useCommunityDeal';
+import { toast } from 'sonner';
 
 interface CreateDealModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function CreateDealModal({ open, onClose }: CreateDealModalProps) {
+export default function CreateDealModal({ open, onClose, onSuccess }: CreateDealModalProps) {
   const { authenticated, login } = usePrivy();
+  const { createDeal, contractAddress } = useCommunityDeal();
   const [formData, setFormData] = useState({
     domainName: '',
     title: '',
@@ -37,8 +41,26 @@ export default function CreateDealModal({ open, onClose }: CreateDealModalProps)
     }
 
     // Validation
-    if (!formData.domainName || !formData.title || !formData.targetPrice) {
+    if (!formData.domainName || !formData.targetPrice) {
       setError('Please fill in all required fields');
+      return;
+    }
+
+    if (!contractAddress) {
+      setError('Contract not deployed on this network');
+      return;
+    }
+
+    const targetPrice = parseFloat(formData.targetPrice);
+    const minContribution = parseFloat(formData.minContribution || '0.1');
+
+    if (targetPrice <= 0) {
+      setError('Target price must be greater than 0');
+      return;
+    }
+
+    if (minContribution >= targetPrice) {
+      setError('Minimum contribution must be less than target price');
       return;
     }
 
@@ -46,11 +68,32 @@ export default function CreateDealModal({ open, onClose }: CreateDealModalProps)
     setError(null);
 
     try {
-      // TODO: Implement actual deal creation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setDealId('deal_' + Math.random().toString(36).substr(2, 9));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create deal');
+      const { hash, receipt } = await createDeal({
+        domainName: formData.domainName,
+        targetPrice: formData.targetPrice,
+        minContribution: formData.minContribution || '0.1',
+        maxParticipants: parseInt(formData.maxParticipants),
+        durationInDays: parseInt(formData.duration),
+      });
+
+      toast.success('Deal created successfully!', {
+        description: `Transaction: ${hash.slice(0, 10)}...`,
+      });
+
+      setDealId(hash);
+      onSuccess?.();
+      
+      // Close after a short delay
+      setTimeout(() => {
+        resetAndClose();
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error creating deal:', err);
+      const errorMessage = err.message || 'Failed to create deal';
+      setError(errorMessage);
+      toast.error('Failed to create deal', {
+        description: errorMessage,
+      });
     } finally {
       setIsProcessing(false);
     }
