@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import DomainLandingPage from '@/components/domain/DomainLandingPage';
+import DomainPageTabs from '@/components/domain/DomainPageTabs';
 import { fetchName } from '@/lib/doma/client';
 import { formatUnits } from 'viem';
 import { getOrCreateDomain } from '@/lib/syncDomain';
@@ -137,7 +137,7 @@ export default async function DomainPage({ params }: DomainPageProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <DomainLandingPage domain={domain} />
+        <DomainPageTabs domain={domain} />
       </>
     );
   } catch (error) {
