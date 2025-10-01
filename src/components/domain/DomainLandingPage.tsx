@@ -12,7 +12,7 @@ import BuyNowModal from '@/components/trading/BuyNowModal';
 import MakeOfferModal from '@/components/trading/MakeOfferModal';
 import SendTradeCardButton from '@/components/trading/SendTradeCardButton';
 import ShareButtons from '@/components/social/ShareButtons';
-import EnhancedPriceChart from '@/components/analytics/EnhancedPriceChart';
+import AIEnhancedPriceChart from '@/components/analytics/AIEnhancedPriceChart';
 import ActivityFeed from '@/components/activity/ActivityFeed';
 import { toast } from 'sonner';
 import { usePrivy } from '@privy-io/react-auth';
@@ -506,10 +506,15 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
             </div>
           </div>
 
-          {/* Price Intelligence Section */}
+          {/* AI Price Intelligence Section */}
           <div className="mt-12">
-            <h2 className="text-3xl font-bold mb-6">Price Intelligence</h2>
-            <EnhancedPriceChart
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold mb-2">AI Price Intelligence</h2>
+              <p className="text-muted-foreground">
+                Advanced AI analysis with {domain.name.length <= 5 ? '15+' : '12+'} factors to predict domain value
+              </p>
+            </div>
+            <AIEnhancedPriceChart
               domain={{
                 name: domain.name,
                 tld: domain.tld,
