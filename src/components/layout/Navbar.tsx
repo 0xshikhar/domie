@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { usePrivy } from '@privy-io/react-auth';
-import { Menu, X, MessageCircle, Search, Users, FileText, TrendingUp } from 'lucide-react';
+import { Menu, X, MessageCircle, Search, Users, FileText, TrendingUp, Activity } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -15,6 +15,7 @@ export default function Navbar() {
   const navItems = [
     { href: '/discover', label: 'Discover', icon: Search },
     { href: '/deals', label: 'Deals', icon: Users },
+    { href: '/activity', label: 'Activity', icon: Activity },
     { href: '/messages', label: 'Messages', icon: MessageCircle },
     { href: '/portfolio', label: 'Portfolio', icon: FileText },
     { href: '/analytics', label: 'Analytics', icon: TrendingUp },

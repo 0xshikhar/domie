@@ -14,6 +14,8 @@
     "format:check": "pnpm prettier ./src --check"
   },
   "dependencies": {
+    "@ai-sdk/google": "^2.0.17",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/extension-accelerate": "^1.2.2",
     "@privy-io/react-auth": "^2.24.0",
     "@privy-io/server-auth": "^1.32.2",
@@ -39,6 +41,7 @@
     "@xmtp/content-type-reaction": "^2.0.2",
     "@xmtp/content-type-reply": "^2.0.2",
     "@xmtp/content-type-text": "^2.0.2",
+    "ai": "^5.0.60",
     "alert": "^6.0.2",
     "axios": "^1.12.2",
     "badge": "^1.0.3",

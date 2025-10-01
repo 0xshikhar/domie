@@ -11,6 +11,9 @@ import { Domain } from '@/lib/doma/types';
 import BuyNowModal from '@/components/trading/BuyNowModal';
 import MakeOfferModal from '@/components/trading/MakeOfferModal';
 import SendTradeCardButton from '@/components/trading/SendTradeCardButton';
+import ShareButtons from '@/components/social/ShareButtons';
+import EnhancedPriceChart from '@/components/analytics/EnhancedPriceChart';
+import ActivityFeed from '@/components/activity/ActivityFeed';
 import { toast } from 'sonner';
 import { usePrivy } from '@privy-io/react-auth';
 
@@ -491,14 +494,39 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                   <CardTitle>Share</CardTitle>
                   <CardDescription>Spread the word</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <Button className="w-full" variant="outline" onClick={handleShare}>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share Domain
-                  </Button>
+                <CardContent className="space-y-2">
+                  <ShareButtons
+                    domainName={domain.name}
+                    price={domain.price || undefined}
+                    currency={domain.currency}
+                    description={domain.description || undefined}
+                  />
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Price Intelligence Section */}
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-6">Price Intelligence</h2>
+            <EnhancedPriceChart
+              domain={{
+                name: domain.name,
+                tld: domain.tld,
+                price: domain.price || undefined,
+                keywords: domain.keywords,
+                id: domain.id,
+              }}
+            />
+          </div>
+
+          {/* Activity Feed Section */}
+          <div className="mt-12">
+            <ActivityFeed
+              domainId={domain.id}
+              showFilters={false}
+              limit={10}
+            />
           </div>
         </div>
       </div>
