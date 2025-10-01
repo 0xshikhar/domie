@@ -5,182 +5,230 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { useCommunityDeal } from '@/hooks/useCommunityDeal';
-import { toast } from 'sonner';
+import { ContractDeal } from '@/hooks/useContractDeals';
 import { formatEther, parseEther } from 'viem';
-import { CommunityDealInfo } from '@/lib/contracts/communityDeal';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface ContributeDealModalProps {
   open: boolean;
   onClose: () => void;
-  deal: CommunityDealInfo;
+  deal: ContractDeal;
   onSuccess?: () => void;
 }
 
 export default function ContributeDealModal({ open, onClose, deal, onSuccess }: ContributeDealModalProps) {
   const [amount, setAmount] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  
   const { contribute } = useCommunityDeal();
-
-  const minContribution = formatEther(deal.targetPrice / BigInt(deal.participantCount || 10));
-  const remaining = formatEther(deal.targetPrice - deal.currentAmount);
+  const { authenticated, login } = usePrivy();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!authenticated) {
+      login();
       return;
     }
 
-    const amountBigInt = parseEther(amount);
-    
-    if (amountBigInt > (deal.targetPrice - deal.currentAmount)) {
-      toast.error(`Amount exceeds remaining target (${remaining} ETH)`);
-      return;
-    }
+    setError(null);
+    setLoading(true);
 
-    setIsLoading(true);
-    
     try {
-      const { hash } = await contribute(deal.dealId, amount);
+      const contributionAmount = parseFloat(amount);
       
-      toast.success('Contribution successful!', {
-        description: `Transaction: ${hash.slice(0, 10)}...`,
-      });
+      // Validation
+      if (contributionAmount < parseFloat(deal.minContribution)) {
+        throw new Error(`Minimum contribution is ${deal.minContribution} ETH`);
+      }
+
+      const remaining = parseFloat(formatEther(deal.targetPrice)) - parseFloat(formatEther(deal.currentAmount));
+      if (contributionAmount > remaining) {
+        throw new Error(`Maximum contribution is ${remaining.toFixed(4)} ETH (remaining amount)`);
+      }
+
+      // Contribute to deal
+      const result = await contribute(deal.dealId, amount);
       
-      onSuccess?.();
-      onClose();
-      setAmount('');
-    } catch (error: any) {
-      console.error('Error contributing:', error);
-      toast.error('Failed to contribute', {
-        description: error.message || 'Please try again',
-      });
+      if (result) {
+        setSuccess(true);
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+          setSuccess(false);
+          setAmount('');
+        }, 2000);
+      }
+    } catch (err: any) {
+      console.error('Contribution error:', err);
+      setError(err.message || 'Failed to contribute. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleMaxClick = () => {
-    setAmount(remaining);
+  const handleClose = () => {
+    if (!loading) {
+      setAmount('');
+      setError(null);
+      setSuccess(false);
+      onClose();
+    }
   };
+
+  const remainingAmount = parseFloat(formatEther(deal.targetPrice)) - parseFloat(formatEther(deal.currentAmount));
+  const suggestedAmounts = [
+    parseFloat(deal.minContribution),
+    parseFloat(deal.minContribution) * 2,
+    Math.min(parseFloat(deal.minContribution) * 5, remainingAmount),
+  ].filter(amt => amt <= remainingAmount);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Contribute to Deal</DialogTitle>
+          <DialogTitle>Contribute to {deal.domainName}</DialogTitle>
           <DialogDescription>
-            Join the community purchase for <strong>{deal.domainName}</strong>
+            Join the community to collectively purchase this domain
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Deal Info */}
-          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Target Price:</span>
-              <span className="font-semibold">{formatEther(deal.targetPrice)} ETH</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Current Amount:</span>
-              <span className="font-semibold">{formatEther(deal.currentAmount)} ETH</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Remaining:</span>
-              <span className="font-semibold text-primary">{remaining} ETH</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Participants:</span>
-              <span className="font-semibold">{deal.participantCount}</span>
-            </div>
+        {success ? (
+          <div className="py-8 text-center">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Contribution Successful!</h3>
+            <p className="text-muted-foreground">
+              You've contributed {amount} ETH to this deal
+            </p>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Deal Info */}
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Target Price</span>
+                <span className="font-semibold">{formatEther(deal.targetPrice)} ETH</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Current Amount</span>
+                <span className="font-semibold">{formatEther(deal.currentAmount)} ETH</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Remaining</span>
+                <span className="font-semibold text-blue-600">{remainingAmount.toFixed(4)} ETH</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Min. Contribution</span>
+                <span className="font-semibold">{deal.minContribution} ETH</span>
+              </div>
+            </div>
 
-          {/* Amount Input */}
-          <div className="space-y-2">
-            <Label htmlFor="amount">Contribution Amount (ETH)</Label>
-            <div className="flex gap-2">
+            {/* Amount Input */}
+            <div>
+              <Label htmlFor="amount">Contribution Amount (ETH)</Label>
               <Input
                 id="amount"
                 type="number"
                 step="0.001"
-                min="0"
-                placeholder={`Min: ${minContribution}`}
+                min={deal.minContribution}
+                max={remainingAmount}
+                placeholder={deal.minContribution}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                disabled={isLoading}
                 required
+                disabled={loading}
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleMaxClick}
-                disabled={isLoading}
+              <p className="text-xs text-muted-foreground mt-1">
+                Min: {deal.minContribution} ETH • Max: {remainingAmount.toFixed(4)} ETH
+              </p>
+            </div>
+
+            {/* Quick Amount Buttons */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Quick Select</Label>
+              <div className="flex gap-2 mt-2">
+                {suggestedAmounts.map((amt) => (
+                  <Button
+                    key={amt}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAmount(amt.toString())}
+                    disabled={loading}
+                  >
+                    {amt} ETH
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm space-y-1">
+                <p className="font-medium text-blue-900 dark:text-blue-100">How it works:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>Your funds are pooled with other participants</li>
+                  <li>When target is reached, domain will be purchased</li>
+                  <li>You'll receive fractional ownership tokens</li>
+                  <li>Can refund if deal expires without reaching target</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Your Share Preview */}
+            {amount && parseFloat(amount) > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                  Your Estimated Share
+                </p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {((parseFloat(amount) / parseFloat(formatEther(deal.targetPrice))) * 100).toFixed(2)}%
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose} 
+                className="flex-1"
+                disabled={loading}
               >
-                Max
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={loading || !amount || parseFloat(amount) <= 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Contributing...
+                  </>
+                ) : (
+                  'Contribute'
+                )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Suggested minimum: {minContribution} ETH per participant
-            </p>
-          </div>
-
-          {/* Info Box */}
-          <div className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm space-y-1">
-              <p className="font-medium">How it works:</p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li>Your funds are pooled with other participants</li>
-                <li>When target is reached, domain will be purchased</li>
-                <li>You&apos;ll receive fractional ownership tokens (ERC-20)</li>
-                <li>Can refund if deal expires without reaching target</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Share Calculation */}
-          {amount && parseFloat(amount) > 0 && (
-            <div className="bg-primary/10 p-3 rounded-lg">
-              <p className="text-sm font-medium mb-1">Your Ownership Share:</p>
-              <p className="text-2xl font-bold text-primary">
-                {((parseFloat(amount) / parseFloat(formatEther(deal.targetPrice))) * 100).toFixed(2)}%
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Based on your contribution of {amount} ETH
-              </p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || !amount || parseFloat(amount) <= 0}
-              className="flex-1"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Contributing...
-                </>
-              ) : (
-                'Contribute'
-              )}
-            </Button>
-          </div>
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

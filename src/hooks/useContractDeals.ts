@@ -71,6 +71,8 @@ export function useContractDeals() {
           fractionalTokenAddress,
         ] = dealData;
 
+        // console.log("dealData", dealData);
+
         // Skip empty deals (domain name empty means deal doesn't exist)
         if (!domainName || domainName.trim() === '') continue;
 

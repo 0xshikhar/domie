@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,10 @@ import { Users, TrendingUp, Clock, Plus, RefreshCw, Loader2 } from 'lucide-react
 import { DealStatus } from '@/lib/contracts/communityDeal';
 import CreateDealModal from '@/components/deals/CreateDealModal';
 import { useContractDeals, ContractDeal } from '@/hooks/useContractDeals';
+import { formatEther } from 'viem';
+
 export default function DealsPage() {
+  const router = useRouter();
   const { deals, loading, error, refreshDeals, isContractAvailable, contractAddress } = useContractDeals();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'funded'>('all');
@@ -145,7 +149,7 @@ export default function DealsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {deals.reduce((sum, d) => sum + parseFloat(String(d.currentAmount)), 0).toFixed(2)} ETH
+                {deals.reduce((sum, d) => sum + parseFloat(formatEther(d.currentAmount)), 0).toFixed(4)} ETH
               </div>
             </CardContent>
           </Card>
@@ -187,7 +191,7 @@ export default function DealsPage() {
                     <CardDescription>{deal.description}</CardDescription>
                   </div>
                   <Badge variant={deal.status === DealStatus.ACTIVE ? 'default' : 'secondary'}>
-                    {deal.status}
+                    {DealStatus[deal.status]}
                   </Badge>
                 </div>
               </CardHeader>
@@ -197,7 +201,7 @@ export default function DealsPage() {
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="font-semibold">
-                      {String(deal.currentAmount)} / {String(deal.targetPrice)} ETH
+                      {formatEther(deal.currentAmount)} / {formatEther(deal.targetPrice)} ETH
                     </span>
                   </div>
                   <Progress value={getProgressPercentage(deal)} className="h-2" />
@@ -230,10 +234,19 @@ export default function DealsPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" disabled={deal.status !== DealStatus.ACTIVE}>
+                  <Button 
+                    className="flex-1" 
+                    disabled={deal.status !== DealStatus.ACTIVE}
+                    onClick={() => router.push(`/deals/${deal.id}`)}
+                  >
                     Join Deal
                   </Button>
-                  <Button variant="outline">View Details</Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => router.push(`/deals/${deal.id}`)}
+                  >
+                    View Details
+                  </Button>
                 </div>
               </CardContent>
             </Card>
