@@ -108,8 +108,11 @@ enum OfferStatus {
 // COMMUNITY DEALS
 model Deal {
   id              String   @id @default(cuid())
+  contractDealId  String?  @unique // Deal ID from smart contract
   domainId        String
+  domainName      String   // Domain name from contract
   creatorId       String
+  creatorAddress  String   // Creator wallet address from contract
   title           String
   description     String?  @db.Text
   targetPrice     String
@@ -122,11 +125,19 @@ model Deal {
   endDate         DateTime
   createdAt       DateTime @default(now())
   
+  // Contract specific fields
+  contractDeadline BigInt?  // Unix timestamp from contract
+  purchased        Boolean  @default(false)
+  domainTokenId    String?  // NFT token ID if purchased
+  fractionalTokenAddress String? // Address of fractional token
+  
   domain          Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
   participants    DealParticipation[]
   
   @@index([domainId])
   @@index([status])
+  @@index([contractDealId])
+  @@index([domainName])
 }
 
 enum DealStatus {

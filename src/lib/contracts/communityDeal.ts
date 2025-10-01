@@ -1,171 +1,5 @@
 import { Address, parseEther, formatEther } from 'viem';
 
-// Contract ABI - Add full ABI after compilation
-export const COMMUNITY_DEAL_ABI = [
-  // Events
-  {
-    type: 'event',
-    name: 'DealCreated',
-    inputs: [
-      { name: 'dealId', type: 'uint256', indexed: true },
-      { name: 'domainName', type: 'string', indexed: false },
-      { name: 'creator', type: 'address', indexed: true },
-      { name: 'targetPrice', type: 'uint256', indexed: false },
-      { name: 'deadline', type: 'uint256', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'ContributionMade',
-    inputs: [
-      { name: 'dealId', type: 'uint256', indexed: true },
-      { name: 'contributor', type: 'address', indexed: true },
-      { name: 'amount', type: 'uint256', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'DealFunded',
-    inputs: [
-      { name: 'dealId', type: 'uint256', indexed: true },
-      { name: 'totalAmount', type: 'uint256', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'DealExecuted',
-    inputs: [
-      { name: 'dealId', type: 'uint256', indexed: true },
-      { name: 'tokenId', type: 'uint256', indexed: false },
-      { name: 'fractionalToken', type: 'address', indexed: false },
-    ],
-  },
-  // Functions
-  {
-    type: 'function',
-    name: 'createDeal',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'domainName', type: 'string' },
-      { name: 'targetPrice', type: 'uint256' },
-      { name: 'minContribution', type: 'uint256' },
-      { name: 'maxParticipants', type: 'uint256' },
-      { name: 'durationInDays', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    type: 'function',
-    name: 'contribute',
-    stateMutability: 'payable',
-    inputs: [{ name: 'dealId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'getDealInfo',
-    stateMutability: 'view',
-    inputs: [{ name: 'dealId', type: 'uint256' }],
-    outputs: [
-      { name: 'domainName', type: 'string' },
-      { name: 'creator', type: 'address' },
-      { name: 'targetPrice', type: 'uint256' },
-      { name: 'currentAmount', type: 'uint256' },
-      { name: 'participantCount', type: 'uint256' },
-      { name: 'deadline', type: 'uint256' },
-      { name: 'status', type: 'uint8' },
-      { name: 'purchased', type: 'bool' },
-      { name: 'domainTokenId', type: 'uint256' },
-      { name: 'fractionalTokenAddress', type: 'address' },
-    ],
-  },
-  {
-    type: 'function',
-    name: 'getParticipantInfo',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'participant', type: 'address' },
-    ],
-    outputs: [
-      { name: 'contribution', type: 'uint256' },
-      { name: 'refunded', type: 'bool' },
-      { name: 'shares', type: 'uint256' },
-    ],
-  },
-  {
-    type: 'function',
-    name: 'getDealParticipants',
-    stateMutability: 'view',
-    inputs: [{ name: 'dealId', type: 'uint256' }],
-    outputs: [{ name: '', type: 'address[]' }],
-  },
-  {
-    type: 'function',
-    name: 'refund',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'dealId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'cancelDeal',
-    stateMutability: 'nonpayable',
-    inputs: [{ name: 'dealId', type: 'uint256' }],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'vote',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'proposalHash', type: 'bytes32' },
-    ],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'getProposalVotes',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'proposalHash', type: 'bytes32' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    type: 'function',
-    name: 'markDomainPurchased',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'tokenId', type: 'uint256' },
-    ],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'setFractionalToken',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'fractionalTokenAddress', type: 'address' },
-    ],
-    outputs: [],
-  },
-  {
-    type: 'function',
-    name: 'withdrawForPurchase',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'dealId', type: 'uint256' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [],
-  },
-] as const;
-
 export enum DealStatus {
   ACTIVE = 0,
   FUNDED = 1,
@@ -196,20 +30,40 @@ export interface ParticipantInfo {
   sharePercentage: number;
 }
 
-// Contract addresses (update after deployment)
-export const COMMUNITY_DEAL_ADDRESSES: Record<number, Address> = {
-  // Doma Chain
-  97476: '0x216C3C0e1EF077b2268CCAb94E39e538e59f801A', // Update after deployment
-  // Base Sepolia
-  84532: '0x0000000000000000000000000000000000000000',
-};
-
-export const DOMA_FRACTIONALIZATION_ADDRESSES: Record<number, Address> = {
-  97476: '0x0000000000000000000000000000000000000000', // Official DOMA address
-};
-
+// DOMA Protocol Contract Addresses
+// Doma Testnet
 export const DOMA_OWNERSHIP_TOKEN_ADDRESSES: Record<number, Address> = {
-  97476: '0x0000000000000000000000000000000000000000', // Official DOMA address
+  97476: '0x424bDf2E8a6F52Bd2c1C81D9437b0DC0309DF90f', // Doma Testnet
+  11155111: '0x9A374915648f1352827fFbf0A7bB5752b6995eB7', // Sepolia
+  84532: '0x2f45DfC5f4c9473fa72aBdFbd223d0979B265046', // Base Sepolia
+};
+
+export const DOMA_RECORD_ADDRESSES: Record<number, Address> = {
+  97476: '0xF6A92E0f8bEa4174297B0219d9d47fEe335f84f8', // Doma Testnet
+  11155111: '0x0000000000000000000000000000000000000000', // Sepolia (update if needed)
+  84532: '0x0000000000000000000000000000000000000000', // Base Sepolia (update if needed)
+};
+
+export const DOMA_PROXY_RECORD_ADDRESSES: Record<number, Address> = {
+  97476: '0xb1508299A01c02aC3B70c7A8B0B07105aaB29E99', // Doma Testnet
+  11155111: '0xD9A0E86AACf2B01013728fcCa9F00093B9b4F3Ff', // Sepolia
+  84532: '0xa40aA710F0C77DF3De6CEe7493d1FfF3715D59Da', // Base Sepolia
+};
+
+export const DOMA_CROSS_CHAIN_GATEWAY_ADDRESSES: Record<number, Address> = {
+  97476: '0xCE1476C791ff195e462632bf9Eb22f3d3cA07388', // Doma Testnet
+  11155111: '0xEC67EfB227218CCc3c7032a6507339E7B4D623Ad', // Sepolia
+  84532: '0xC721925DF8268B1d4a1673D481eB446B3EDaAAdE', // Base Sepolia
+};
+
+export const DOMA_FORWARDER_ADDRESSES: Record<number, Address> = {
+  97476: '0xf17beC16794e018E2F0453a1282c3DA3d121f410', // Doma Testnet
+};
+
+// Note: DOMA doesn't have a separate fractionalization contract yet
+// The fractionalization is done through the Ownership Token contract
+export const DOMA_FRACTIONALIZATION_ADDRESSES: Record<number, Address> = {
+  97476: '0x424bDf2E8a6F52Bd2c1C81D9437b0DC0309DF90f', // Same as Ownership Token for now
 };
 
 /**
@@ -232,8 +86,9 @@ export function formatDealInfo(
     fractionalTokenAddress,
   ] = contractResponse;
 
-  const progressPercentage =
-    targetPrice > 0n ? Number((currentAmount * 100n) / targetPrice) : 0;
+  const progressPercentage = currentAmount >= targetPrice 
+    ? 100 
+    : Number((currentAmount * BigInt(100)) / targetPrice);
 
   return {
     dealId,
@@ -245,7 +100,7 @@ export function formatDealInfo(
     deadline,
     status: Number(status) as DealStatus,
     purchased,
-    domainTokenId: domainTokenId > 0n ? domainTokenId : undefined,
+    domainTokenId: domainTokenId > BigInt(0) ? domainTokenId : undefined,
     fractionalTokenAddress:
       fractionalTokenAddress !==
       '0x0000000000000000000000000000000000000000'
@@ -264,10 +119,9 @@ export function formatParticipantInfo(
 ): ParticipantInfo {
   const [contribution, refunded, shares] = contractResponse;
 
-  const sharePercentage =
-    targetPrice > 0n
-      ? Number((shares * 100n) / 10000n) // shares are stored as basis points
-      : 0;
+  const sharePercentage = targetPrice > BigInt(0)
+    ? Number((contribution * BigInt(100)) / targetPrice)
+    : 0;
 
   return {
     contribution,

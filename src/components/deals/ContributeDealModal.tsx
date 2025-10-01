@@ -135,7 +135,7 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
               <ul className="list-disc list-inside text-muted-foreground space-y-1">
                 <li>Your funds are pooled with other participants</li>
                 <li>When target is reached, domain will be purchased</li>
-                <li>You'll receive fractional ownership tokens (ERC-20)</li>
+                <li>You&apos;ll receive fractional ownership tokens (ERC-20)</li>
                 <li>Can refund if deal expires without reaching target</li>
               </ul>
             </div>

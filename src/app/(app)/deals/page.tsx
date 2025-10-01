@@ -1,52 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Users, TrendingUp, Clock, Plus } from 'lucide-react';
-import { Deal, DealStatus } from '@/lib/doma/types';
+import { Users, TrendingUp, Clock, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { DealStatus } from '@/lib/contracts/communityDeal';
 import CreateDealModal from '@/components/deals/CreateDealModal';
-
-// Mock data
-const mockDeals: Deal[] = [
-  {
-    id: '1',
-    domainId: '3',
-    creatorId: 'user1',
-    title: 'Group Buy: crypto.doma',
-    description: 'Let\'s pool together to buy this premium domain!',
-    targetPrice: '5.0',
-    minContribution: '0.5',
-    maxParticipants: 10,
-    status: DealStatus.ACTIVE,
-    currentAmount: '3.5',
-    participantCount: 7,
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '2',
-    domainId: '4',
-    creatorId: 'user2',
-    title: 'Community Deal: web3.doma',
-    description: 'Premium web3 domain - fractional ownership',
-    targetPrice: '4.2',
-    minContribution: '0.3',
-    maxParticipants: 14,
-    status: DealStatus.ACTIVE,
-    currentAmount: '2.1',
-    participantCount: 7,
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
+import { useContractDeals, ContractDeal } from '@/hooks/useContractDeals';
 export default function DealsPage() {
-  const [deals, setDeals] = useState<Deal[]>(mockDeals);
+  const { deals, loading, error, refreshDeals, isContractAvailable, contractAddress } = useContractDeals();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'funded'>('all');
+  const [syncing, setSyncing] = useState(false);
 
   const filteredDeals = deals.filter(deal => {
     if (filter === 'all') return true;
@@ -55,14 +22,61 @@ export default function DealsPage() {
     return true;
   });
 
-  const getProgressPercentage = (deal: Deal) => {
-    return (parseFloat(deal.currentAmount) / parseFloat(deal.targetPrice)) * 100;
+  const getProgressPercentage = (deal: ContractDeal) => {
+    return deal.progressPercentage;
   };
 
-  const getDaysRemaining = (endDate: string) => {
-    const days = Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, days);
+  const getDaysRemaining = (deal: ContractDeal) => {
+    return deal.daysRemaining;
   };
+
+  // Sync deals with database
+  const syncDeals = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch('/api/deals/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chainId: 97476 })
+      });
+      const result = await response.json();
+      if (result.success) {
+        refreshDeals();
+        console.log(`Synced ${result.synced} deals`);
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading community deals...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={refreshDeals}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,11 +88,30 @@ export default function DealsPage() {
             <p className="text-muted-foreground">
               Pool funds with others to buy premium domains
             </p>
+            {contractAddress && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Contract: {contractAddress}
+              </p>
+            )}
           </div>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Deal
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={syncDeals}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sync
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Deal
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -112,7 +145,7 @@ export default function DealsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {deals.reduce((sum, d) => sum + parseFloat(d.currentAmount), 0).toFixed(2)} ETH
+                {deals.reduce((sum, d) => sum + parseFloat(String(d.currentAmount)), 0).toFixed(2)} ETH
               </div>
             </CardContent>
           </Card>
@@ -164,7 +197,7 @@ export default function DealsPage() {
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="font-semibold">
-                      {deal.currentAmount} / {deal.targetPrice} ETH
+                      {String(deal.currentAmount)} / {String(deal.targetPrice)} ETH
                     </span>
                   </div>
                   <Progress value={getProgressPercentage(deal)} className="h-2" />
@@ -190,7 +223,7 @@ export default function DealsPage() {
                     <p className="text-muted-foreground mb-1">Time Left</p>
                     <p className="font-semibold flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {getDaysRemaining(deal.endDate)}d
+                      {getDaysRemaining(deal)}d
                     </p>
                   </div>
                 </div>

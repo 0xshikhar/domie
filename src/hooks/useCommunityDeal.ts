@@ -2,13 +2,12 @@ import { useCallback } from 'react';
 import { usePublicClient, useWalletClient, useChainId } from 'wagmi';
 import { Address, parseEther } from 'viem';
 import {
-  COMMUNITY_DEAL_ABI,
-  COMMUNITY_DEAL_ADDRESSES,
   CommunityDealInfo,
   ParticipantInfo,
   formatDealInfo,
   formatParticipantInfo,
 } from '@/lib/contracts/communityDeal';
+import { COMMUNITY_DEAL_ADDRESSES, COMMUNITY_DEAL_ABI} from '@/lib/contracts/abis/CommunityDealData';
 
 /**
  * Hook to interact with Community Deal contract
@@ -18,7 +17,7 @@ export function useCommunityDeal() {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  const contractAddress = COMMUNITY_DEAL_ADDRESSES[chainId];
+  const contractAddress = COMMUNITY_DEAL_ADDRESSES[chainId] as `0x${string}` | undefined;
 
   /**
    * Create a new community deal
@@ -49,14 +48,14 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+
       // Parse logs to get deal ID
       const dealCreatedLog = receipt.logs.find(
         (log) => log.topics[0] === '0x...' // Add event signature
       );
-      
+
       return { hash, receipt };
     },
     [walletClient, contractAddress, publicClient]
@@ -80,7 +79,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
@@ -180,7 +179,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
@@ -204,7 +203,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
@@ -228,7 +227,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
@@ -240,7 +239,7 @@ export function useCommunityDeal() {
    */
   const getProposalVotes = useCallback(
     async (dealId: string, proposalHash: `0x${string}`): Promise<bigint> => {
-      if (!publicClient || !contractAddress) return 0n;
+      if (!publicClient || !contractAddress) return BigInt(0);
 
       try {
         const result = await publicClient.readContract({
@@ -253,7 +252,7 @@ export function useCommunityDeal() {
         return result as bigint;
       } catch (error) {
         console.error('Error fetching proposal votes:', error);
-        return 0n;
+        return BigInt(0);
       }
     },
     [publicClient, contractAddress]
@@ -276,7 +275,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
@@ -300,7 +299,7 @@ export function useCommunityDeal() {
       });
 
       if (!publicClient) throw new Error('Public client not available');
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       return { hash, receipt };
     },
