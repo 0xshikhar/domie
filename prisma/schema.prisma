@@ -28,6 +28,7 @@ model User {
   dealParticipations DealParticipation[]
   notifications Notification[]
   activities    Activity[]
+  landingPages  DomainLandingPage[]
   
   @@index([walletAddress])
   @@index([username])
@@ -59,6 +60,7 @@ model Domain {
   analytics       DomainAnalytics[]
   activities      Activity[]
   deals           Deal[]
+  landingPage     DomainLandingPage?
   
   @@index([name])
   @@index([tokenId])
@@ -296,5 +298,51 @@ enum NotificationType {
   DOMAIN_SOLD
   DEAL_FUNDED
   MESSAGE_RECEIVED
+}
+
+// CUSTOM LANDING PAGES
+model DomainLandingPage {
+  id              String   @id @default(cuid())
+  domainId        String   @unique
+  ownerId         String
+  
+  // Branding
+  primaryColor    String   @default("#3b82f6")
+  secondaryColor  String   @default("#1e293b")
+  accentColor     String   @default("#8b5cf6")
+  logoUrl         String?
+  heroImageUrl    String?
+  heroVideoUrl    String?
+  fontFamily      String   @default("Inter")
+  
+  // SEO Customization
+  customTitle     String?
+  customDescription String? @db.Text
+  customOgImage   String?
+  customKeywords  String[]
+  
+  // Content Sections (JSON array of section configs)
+  sections        Json     @default("[]")
+  
+  // Settings
+  template        String   @default("default")
+  isPublished     Boolean  @default(false)
+  showOrderbook   Boolean  @default(true)
+  showAnalytics   Boolean  @default(true)
+  showOffers      Boolean  @default(true)
+  
+  // Custom CTAs
+  primaryCTA      String   @default("Buy Now")
+  secondaryCTA    String   @default("Make Offer")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  domain          Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  @@index([domainId])
+  @@index([ownerId])
+  @@index([isPublished])
 }
 
