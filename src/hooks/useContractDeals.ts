@@ -14,6 +14,7 @@ export interface ContractDeal extends CommunityDealInfo {
   progressPercentage: number;
   minContribution: string;
   maxParticipants: number;
+  xmtpGroupId?: string; // XMTP group conversation ID for deal room
 }
 
 export function useContractDeals() {
@@ -108,6 +109,7 @@ export function useContractDeals() {
           endDate: new Date(Number(deadline) * 1000).toISOString(),
           minContribution: "0.01", // Default value, could be read from contract
           maxParticipants: 50, // Default value, could be read from contract
+          xmtpGroupId: undefined, // TODO: Fetch from database
         };
 
         validDeals.push(deal);

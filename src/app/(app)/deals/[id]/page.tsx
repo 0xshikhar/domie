@@ -16,6 +16,7 @@ import { useContractDeals, ContractDeal } from '@/hooks/useContractDeals';
 import { useCommunityDeal } from '@/hooks/useCommunityDeal';
 import { DealStatus } from '@/lib/contracts/communityDeal';
 import ContributeDealModal from '@/components/deals/ContributeDealModal';
+import { DealRoom } from '@/components/deals/DealRoom';
 import { formatEther } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
 
@@ -274,12 +275,34 @@ export default function DealDetailsPage() {
             </Card>
 
             {/* Tabs */}
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs defaultValue={isParticipant ? "room" : "details"} className="w-full">
+              <TabsList className={`grid w-full ${isParticipant ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                {isParticipant && <TabsTrigger value="room">Deal Room</TabsTrigger>}
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="participants">Participants</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
               </TabsList>
+
+              {/* Deal Room Tab - Only for participants */}
+              {isParticipant && deal.xmtpGroupId && (
+                <TabsContent value="room" className="mt-6">
+                  <DealRoom
+                    dealId={deal.id}
+                    xmtpGroupId={deal.xmtpGroupId}
+                    dealName={deal.domainName}
+                    targetPrice={formatEther(deal.targetPrice)}
+                    currentAmount={formatEther(deal.currentAmount)}
+                    participants={participants.map((address, index) => ({
+                      id: `${address}-${index}`,
+                      walletAddress: address,
+                      contribution: '0', // TODO: Fetch actual contribution
+                      sharePercentage: 0, // TODO: Calculate actual percentage
+                    }))}
+                    status={DealStatus[deal.status]}
+                    endDate={new Date(deal.endDate)}
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="details" className="space-y-4">
                 <Card>

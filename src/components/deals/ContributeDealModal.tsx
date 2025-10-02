@@ -11,6 +11,8 @@ import { useCommunityDeal } from '@/hooks/useCommunityDeal';
 import { ContractDeal } from '@/hooks/useContractDeals';
 import { formatEther, parseEther } from 'viem';
 import { usePrivy } from '@privy-io/react-auth';
+import { useXMTP } from '@/components/messaging/XMTPProvider';
+import { addParticipantOnContribution } from '@/lib/xmtp/dealIntegration';
 
 interface ContributeDealModalProps {
   open: boolean;
@@ -26,7 +28,8 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
   const [success, setSuccess] = useState(false);
   
   const { contribute } = useCommunityDeal();
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
+  const { client } = useXMTP();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +60,23 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
       
       if (result) {
         setSuccess(true);
+
+        // Add participant to XMTP group
+        if (client && deal.xmtpGroupId && user?.wallet?.address) {
+          const newTotalAmount = (parseFloat(formatEther(deal.currentAmount)) + contributionAmount).toString();
+          addParticipantOnContribution(
+            client,
+            deal.id,
+            deal.xmtpGroupId,
+            user.wallet.address,
+            amount,
+            newTotalAmount,
+            formatEther(deal.targetPrice)
+          ).catch(err => {
+            console.error('Failed to add to XMTP group:', err);
+          });
+        }
+
         setTimeout(() => {
           onSuccess?.();
           onClose();

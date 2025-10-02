@@ -109,6 +109,7 @@ enum OfferStatus {
 model Deal {
   id              String   @id @default(cuid())
   contractDealId  String?  @unique // Deal ID from smart contract
+  xmtpGroupId     String?  @unique // XMTP group conversation ID
   domainId        String
   domainName      String   // Domain name from contract
   creatorId       String
@@ -133,11 +134,14 @@ model Deal {
   
   domain          Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
   participants    DealParticipation[]
+  messages        DealMessage[]
+  votes           DealVote[]
   
   @@index([domainId])
   @@index([status])
   @@index([contractDealId])
   @@index([domainName])
+  @@index([xmtpGroupId])
 }
 
 enum DealStatus {
@@ -152,13 +156,71 @@ model DealParticipation {
   id              String   @id @default(cuid())
   dealId          String
   userId          String
+  walletAddress   String   // Participant wallet address
   contribution    String
+  sharePercentage Float    @default(0) // Ownership percentage
+  joinedAt        DateTime @default(now())
   createdAt       DateTime @default(now())
   
   deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([dealId, userId])
+  @@index([walletAddress])
+}
+
+// Deal room messages (stored for persistence alongside XMTP)
+model DealMessage {
+  id              String   @id @default(cuid())
+  dealId          String
+  senderAddress   String
+  senderInboxId   String?  // XMTP inbox ID
+  content         String   @db.Text
+  messageType     MessageType @default(TEXT)
+  metadata        Json?    // Additional message data
+  createdAt       DateTime @default(now())
+  
+  deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  
+  @@index([dealId])
+  @@index([senderAddress])
+  @@index([createdAt])
+}
+
+enum MessageType {
+  TEXT
+  TRADE_CARD
+  VOTE
+  SYSTEM
+  MILESTONE
+}
+
+// Voting system for deal decisions
+model DealVote {
+  id              String   @id @default(cuid())
+  dealId          String
+  proposalHash    String   // Hash of the proposal
+  proposalTitle   String
+  proposalText    String   @db.Text
+  proposalType    VoteType
+  voterAddress    String
+  vote            Boolean  // true = yes, false = no
+  votingPower     Float    // Based on contribution percentage
+  votedAt         DateTime @default(now())
+  
+  deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  
+  @@unique([dealId, proposalHash, voterAddress])
+  @@index([dealId])
+  @@index([proposalHash])
+}
+
+enum VoteType {
+  ACCEPT_OFFER
+  CHANGE_STRATEGY
+  DISTRIBUTE_FUNDS
+  DOMAIN_USAGE
+  GENERAL
 }
 
 // ANALYTICS

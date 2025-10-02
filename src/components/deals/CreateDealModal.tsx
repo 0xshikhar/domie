@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useCommunityDeal } from '@/hooks/useCommunityDeal';
+import { useXMTP } from '@/components/messaging/XMTPProvider';
+import { createDealGroupOnCreation } from '@/lib/xmtp/dealIntegration';
 import { toast } from 'sonner';
 
 interface CreateDealModalProps {
@@ -19,8 +21,9 @@ interface CreateDealModalProps {
 }
 
 export default function CreateDealModal({ open, onClose, onSuccess }: CreateDealModalProps) {
-  const { authenticated, login } = usePrivy();
+  const { authenticated, login, user } = usePrivy();
   const { createDeal, contractAddress } = useCommunityDeal();
+  const { client } = useXMTP();
   const [formData, setFormData] = useState({
     domainName: '',
     title: '',
@@ -81,6 +84,23 @@ export default function CreateDealModal({ open, onClose, onSuccess }: CreateDeal
       });
 
       setDealId(hash);
+
+      // Create XMTP group for the deal
+      if (client && user?.wallet?.address) {
+        createDealGroupOnCreation(
+          client,
+          hash, // Using transaction hash as deal ID
+          formData.domainName,
+          formData.targetPrice,
+          user.wallet.address
+        ).catch(err => {
+          console.error('Failed to create XMTP group:', err);
+          toast.error('Deal created but group chat failed', {
+            description: 'You can still participate in the deal',
+          });
+        });
+      }
+
       onSuccess?.();
       
       // Close after a short delay

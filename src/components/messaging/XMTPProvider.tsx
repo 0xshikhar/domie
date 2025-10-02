@@ -24,6 +24,12 @@ interface XMTPContextType {
   listConversations: () => Promise<Conversation[]>;
   getOrCreateDm: (peerAddress: string) => Promise<Conversation | null>;
   streamMessages: (conversationId: string, onMessage: (message: XMTPMessage) => void) => Promise<void>;
+  // Group management
+  createGroup: (name: string, description: string, memberAddresses: string[]) => Promise<Conversation | null>;
+  addMembersToGroup: (groupId: string, memberAddresses: string[]) => Promise<boolean>;
+  removeMembersFromGroup: (groupId: string, memberAddresses: string[]) => Promise<boolean>;
+  getGroupById: (groupId: string) => Promise<Conversation | null>;
+  listGroups: () => Promise<Conversation[]>;
 }
 
 const XMTPContext = createContext<XMTPContextType | null>(null);
@@ -218,6 +224,136 @@ export function XMTPProvider({ children }: XMTPProviderProps) {
     }
   };
 
+  const createGroup = async (name: string, description: string, memberAddresses: string[]): Promise<Conversation | null> => {
+    if (!client) {
+      throw new Error('XMTP client not initialized');
+    }
+
+    try {
+      console.log('Creating XMTP group:', name);
+      
+      // Resolve member addresses to inbox IDs
+      const inboxIds: string[] = [];
+      for (const address of memberAddresses) {
+        const canMessage = await client.canMessage([address.toLowerCase() as any]);
+        if (canMessage.get(address.toLowerCase())) {
+          inboxIds.push(address.toLowerCase());
+        }
+      }
+
+      if (inboxIds.length === 0) {
+        throw new Error('No valid members to add to group');
+      }
+
+      // Create group
+      const group = await client.conversations.newGroup(inboxIds, {
+        name: name,
+        description: description,
+      });
+
+      console.log('✅ Group created:', group.id);
+      return group;
+    } catch (err) {
+      console.error('Failed to create group:', err);
+      return null;
+    }
+  };
+
+  const addMembersToGroup = async (groupId: string, memberAddresses: string[]): Promise<boolean> => {
+    if (!client) {
+      throw new Error('XMTP client not initialized');
+    }
+
+    try {
+      const group = await client.conversations.getConversationById(groupId);
+      if (!group) {
+        throw new Error('Group not found');
+      }
+
+      // Resolve addresses to inbox IDs
+      const inboxIds: string[] = [];
+      for (const address of memberAddresses) {
+        const canMessage = await client.canMessage([address.toLowerCase() as any]);
+        if (canMessage.get(address.toLowerCase())) {
+          inboxIds.push(address.toLowerCase());
+        }
+      }
+
+      if (inboxIds.length > 0) {
+        await (group as any).addMembers(inboxIds);
+        console.log('✅ Members added to group');
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Failed to add members to group:', err);
+      return false;
+    }
+  };
+
+  const removeMembersFromGroup = async (groupId: string, memberAddresses: string[]): Promise<boolean> => {
+    if (!client) {
+      throw new Error('XMTP client not initialized');
+    }
+
+    try {
+      const group = await client.conversations.getConversationById(groupId);
+      if (!group) {
+        throw new Error('Group not found');
+      }
+
+      // Resolve addresses to inbox IDs
+      const inboxIds: string[] = [];
+      for (const address of memberAddresses) {
+        inboxIds.push(address.toLowerCase());
+      }
+
+      if (inboxIds.length > 0) {
+        await (group as any).removeMembers(inboxIds);
+        console.log('✅ Members removed from group');
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Failed to remove members from group:', err);
+      return false;
+    }
+  };
+
+  const getGroupById = async (groupId: string): Promise<Conversation | null> => {
+    if (!client) {
+      throw new Error('XMTP client not initialized');
+    }
+
+    try {
+      const group = await client.conversations.getConversationById(groupId);
+      return group || null;
+    } catch (err) {
+      console.error('Failed to get group:', err);
+      return null;
+    }
+  };
+
+  const listGroups = async (): Promise<Conversation[]> => {
+    if (!client) {
+      console.warn('XMTP client not initialized');
+      return [];
+    }
+
+    try {
+      await client.conversations.sync();
+      const groups = await client.conversations.listGroups({
+        consentStates: [ConsentState.Allowed, ConsentState.Unknown],
+      });
+      return groups;
+    } catch (err) {
+      console.error('Failed to list groups:', err);
+      return [];
+    }
+  };
+
   // Auto-initialize when wallet is connected
   useEffect(() => {
     if (authenticated && user?.wallet?.address && walletClient && !client && !isLoading) {
@@ -236,6 +372,11 @@ export function XMTPProvider({ children }: XMTPProviderProps) {
     listConversations,
     getOrCreateDm,
     streamMessages,
+    createGroup,
+    addMembersToGroup,
+    removeMembersFromGroup,
+    getGroupById,
+    listGroups,
   };
 
   return (
