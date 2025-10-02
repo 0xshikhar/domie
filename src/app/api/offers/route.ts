@@ -62,26 +62,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update domain in database first to satisfy foreign key
-    await prisma.domain.upsert({
-      where: { id: domainId },
-      update: {
-        // Update existing domain
-        owner: domainOwner || offerer,
-        price: domainPrice?.toString(),
-        isListed: !!domainPrice,
-      },
-      create: {
-        // Create new domain
-        id: domainId,
-        name: domainName || domainId,
-        tld: domainName?.split('.').pop() || 'doma',
-        tokenId: domainId,
-        owner: domainOwner || offerer,
-        price: domainPrice?.toString(),
-        currency: currency || 'ETH',
-        isListed: !!domainPrice,
+    // First try to find by tokenId or name
+    let domain = await prisma.domain.findFirst({
+      where: {
+        OR: [
+          { id: domainId },
+          { tokenId: domainId },
+          { name: domainName || domainId },
+        ],
       },
     });
+
+    if (domain) {
+      // Update existing domain
+      await prisma.domain.update({
+        where: { id: domain.id },
+        data: {
+          owner: domainOwner || domain.owner,
+          price: domainPrice?.toString() || domain.price,
+          isListed: domainPrice ? true : domain.isListed,
+        },
+      });
+    } else {
+      // Create new domain
+      domain = await prisma.domain.create({
+        data: {
+          id: domainId,
+          name: domainName || domainId,
+          tld: domainName?.split('.').pop() || 'doma',
+          tokenId: domainId,
+          owner: domainOwner || offerer,
+          price: domainPrice?.toString(),
+          currency: currency || 'ETH',
+          isListed: !!domainPrice,
+        },
+      });
+    }
 
     // Create or update user in database if userId provided
     if (userId) {
@@ -109,7 +125,7 @@ export async function POST(request: NextRequest) {
     const offer = await prisma.offer.create({
       data: {
         externalId,
-        domainId,
+        domainId: domain.id, // Use the actual domain ID from database
         offerer,
         userId: userRecord?.id || null, // Use user.id, not walletAddress
         amount,
@@ -123,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     // Update domain offer count
     await prisma.domain.update({
-      where: { id: domainId },
+      where: { id: domain.id },
       data: { offerCount: { increment: 1 } },
     });
 
@@ -133,7 +149,7 @@ export async function POST(request: NextRequest) {
         await prisma.activity.create({
           data: {
             userId: userRecord.id,
-            domainId,
+            domainId: domain.id,
             type: 'OFFER_MADE',
             title: 'New offer made',
             description: `Offer of ${amount} ${currency} made for domain`,

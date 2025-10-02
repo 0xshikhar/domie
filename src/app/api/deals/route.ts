@@ -44,17 +44,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       domainId,
+      domainName,
       creatorId,
+      creatorAddress,
       title,
       description,
       targetPrice,
       minContribution,
       maxParticipants,
       duration,
+      contractDealId,
     } = body;
 
     // Validation
-    if (!domainId || !creatorId || !title || !targetPrice || !duration) {
+    if (!domainId || !domainName || !creatorId || !creatorAddress || !title || !targetPrice || !duration) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -67,13 +70,16 @@ export async function POST(request: NextRequest) {
     const deal = await prisma.deal.create({
       data: {
         domainId,
+        domainName,
         creatorId,
+        creatorAddress,
         title,
-        description,
+        description: description || null,
         targetPrice,
         minContribution: minContribution || '0.1',
         maxParticipants: maxParticipants || 10,
         endDate,
+        contractDealId: contractDealId || null,
       },
       include: {
         domain: true,

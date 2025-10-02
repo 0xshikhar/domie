@@ -51,8 +51,12 @@ export default function DealDetailsPage() {
             setParticipants(participantAddresses);
             
             // If user is authenticated, check their participation
-            if (authenticated && user?.wallet?.address) {
-              const participation = await getParticipantInfo(dealId, user.wallet.address as `0x${string}`);
+            if (authenticated && user?.wallet?.address && foundDeal.targetPrice) {
+              const participation = await getParticipantInfo(
+                dealId, 
+                user.wallet.address as `0x${string}`,
+                foundDeal.targetPrice
+              );
               setUserParticipation(participation);
             }
           } catch (err) {
@@ -112,7 +116,7 @@ export default function DealDetailsPage() {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Deal Not Found</h2>
-          <p className="text-muted-foreground mb-4">This deal doesn't exist or has been removed.</p>
+          <p className="text-muted-foreground mb-4">This deal doesn&apos;t exist or has been removed.</p>
           <Button onClick={() => router.push('/deals')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Deals
@@ -219,7 +223,7 @@ export default function DealDetailsPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       <p className="font-semibold text-green-900 dark:text-green-100">
-                        You're participating in this deal!
+                        You&apos;re participating in this deal!
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">

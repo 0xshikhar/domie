@@ -103,7 +103,7 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Contribution Successful!</h3>
             <p className="text-muted-foreground">
-              You've contributed {amount} ETH to this deal
+              You&apos;ve contributed {amount} ETH to this deal
             </p>
           </div>
         ) : (
@@ -175,7 +175,7 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
                 <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   <li>Your funds are pooled with other participants</li>
                   <li>When target is reached, domain will be purchased</li>
-                  <li>You'll receive fractional ownership tokens</li>
+                  <li>You&apos;ll receive fractional ownership tokens</li>
                   <li>Can refund if deal expires without reaching target</li>
                 </ul>
               </div>

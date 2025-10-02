@@ -10,6 +10,7 @@ import { Eye, Heart, MessageCircle, Share2, TrendingUp, Copy, ExternalLink, Chec
 import { Domain } from '@/lib/doma/types';
 import BuyNowModal from '@/components/trading/BuyNowModal';
 import MakeOfferModal from '@/components/trading/MakeOfferModal';
+import SendTradeCardButton from '@/components/trading/SendTradeCardButton';
 import { toast } from 'sonner';
 import { usePrivy } from '@privy-io/react-auth';
 
@@ -207,15 +208,26 @@ export default function DomainLandingPage({ domain }: DomainLandingPageProps) {
                         <Heart className={`h-5 w-5 ${isWatching ? 'fill-current text-red-500' : ''}`} />
                       </Button>
                     </div>
-                    <Button 
-                      size="lg" 
-                      variant="secondary" 
-                      className="w-full"
-                      onClick={handleContactOwner}
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      Contact Owner
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        size="lg" 
+                        variant="secondary"
+                        onClick={handleContactOwner}
+                      >
+                        <MessageCircle className="h-5 w-5 mr-2" />
+                        Message
+                      </Button>
+                      <SendTradeCardButton
+                        domainName={domain.name}
+                        tokenId={domain.tokenId}
+                        price={domain.price || '0'}
+                        currency={domain.currency}
+                        ownerAddress={domain.owner}
+                        action="buy"
+                        size="lg"
+                        variant="default"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -62,3 +62,59 @@ export function isTradeCardMessage(content: string): boolean {
     return false;
   }
 }
+
+/**
+ * Create a trade card for a domain listing (Buy Now)
+ */
+export function createBuyNowTradeCard(
+  domainName: string,
+  tokenId: string,
+  price: string,
+  currency: string = 'ETH'
+): string {
+  return createTradeCardMessage({
+    domainName,
+    tokenId,
+    price,
+    currency,
+    action: 'buy',
+  });
+}
+
+/**
+ * Create a trade card for making an offer
+ */
+export function createOfferTradeCard(
+  domainName: string,
+  tokenId: string,
+  amount: string,
+  currency: string = 'ETH'
+): string {
+  return createTradeCardMessage({
+    domainName,
+    tokenId,
+    price: '0', // Not buying, making offer
+    currency,
+    action: 'offer',
+    amount,
+  });
+}
+
+/**
+ * Create a counter offer trade card
+ */
+export function createCounterOfferTradeCard(
+  domainName: string,
+  tokenId: string,
+  amount: string,
+  currency: string = 'ETH'
+): string {
+  return createTradeCardMessage({
+    domainName,
+    tokenId,
+    price: '0',
+    currency,
+    action: 'counter',
+    amount,
+  });
+}

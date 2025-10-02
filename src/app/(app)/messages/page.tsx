@@ -13,6 +13,8 @@ import TradeCard from '@/components/messaging/TradeCard';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { createTransactionReceipt } from '@/lib/xmtp/trading';
+import { parseTradeCardMessage, isTradeCardMessage } from '@/lib/xmtp/client';
 
 interface Conversation {
   id: string;
@@ -102,6 +104,7 @@ const saveToStorage = (key: string, value: any) => {
 function MessagesContent() {
   const searchParams = useSearchParams();
   const peerAddress = searchParams.get('peer');
+  const tradeCardParam = searchParams.get('tradeCard');
   const { 
     client, 
     isLoading: xmtpLoading, 
@@ -119,6 +122,7 @@ function MessagesContent() {
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [tradeCardSent, setTradeCardSent] = useState(false);
 
   // Load conversations and messages from localStorage on mount
   useEffect(() => {
@@ -222,6 +226,61 @@ function MessagesContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peerAddress, authenticated, isInitialized, client]);
 
+  // Auto-send trade card if provided in URL
+  useEffect(() => {
+    const sendTradeCard = async () => {
+      if (tradeCardParam && selectedConversation && !tradeCardSent && isInitialized) {
+        try {
+          const decodedTradeCard = decodeURIComponent(tradeCardParam);
+          
+          // Parse trade card to get data
+          const tradeCardData = parseTradeCardMessage(decodedTradeCard);
+          
+          if (tradeCardData && isTradeCardMessage(decodedTradeCard)) {
+            // Create message with trade card
+            const tradeCardMessage: Message = {
+              id: Date.now().toString(),
+              content: decodedTradeCard,
+              senderAddress: user?.wallet?.address || 'unknown',
+              timestamp: new Date(),
+              isTradeCard: true,
+              tradeCardData,
+            };
+
+            // Add to messages
+            const updatedMessages = [...messages, tradeCardMessage];
+            setMessages(updatedMessages);
+
+            // Update conversation
+            const updatedConversations = conversations.map(conv =>
+              conv.id === selectedConversation.id
+                ? { ...conv, lastMessage: `Trade card: ${tradeCardData.domainName}`, timestamp: new Date() }
+                : conv
+            );
+            setConversations(updatedConversations);
+
+            // Send via XMTP
+            if (client && selectedXmtpConv) {
+              try {
+                await xmtpSendMessage(selectedXmtpConv.id, decodedTradeCard);
+                toast.success('Trade card sent!');
+              } catch (error) {
+                console.error('Failed to send trade card via XMTP:', error);
+              }
+            }
+
+            setTradeCardSent(true);
+          }
+        } catch (error) {
+          console.error('Failed to send trade card:', error);
+          toast.error('Failed to send trade card');
+        }
+      }
+    };
+
+    sendTradeCard();
+  }, [tradeCardParam, selectedConversation, tradeCardSent, isInitialized, messages, conversations, client, selectedXmtpConv, xmtpSendMessage, user]);
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -264,6 +323,48 @@ function MessagesContent() {
       }
     } else {
       toast.info('Message saved locally (XMTP not connected)');
+    }
+  };
+
+  const handleTransactionComplete = async (hash?: string, tradeData?: any) => {
+    if (!selectedConversation || !hash) return;
+
+    // Create transaction receipt message
+    const receiptContent = createTransactionReceipt(
+      tradeData?.action || 'buy',
+      tradeData?.domainName || 'Domain',
+      tradeData?.price || tradeData?.amount || '0',
+      tradeData?.currency || 'ETH',
+      hash,
+      undefined // explorerUrl will be added by the function
+    );
+
+    const receiptMessage: Message = {
+      id: Date.now().toString(),
+      content: receiptContent,
+      senderAddress: user?.wallet?.address || 'unknown',
+      timestamp: new Date(),
+    };
+
+    // Add receipt to messages
+    const updatedMessages = [...messages, receiptMessage];
+    setMessages(updatedMessages);
+
+    // Update conversation
+    const updatedConversations = conversations.map(conv =>
+      conv.id === selectedConversation.id
+        ? { ...conv, lastMessage: '✅ Transaction completed', timestamp: new Date() }
+        : conv
+    );
+    setConversations(updatedConversations);
+
+    // Send via XMTP
+    if (client && selectedXmtpConv) {
+      try {
+        await xmtpSendMessage(selectedXmtpConv.id, receiptContent);
+      } catch (error) {
+        console.error('Failed to send receipt via XMTP:', error);
+      }
     }
   };
 
@@ -469,7 +570,10 @@ function MessagesContent() {
                             <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                                 {message.isTradeCard && message.tradeCardData ? (
-                                  <TradeCard data={message.tradeCardData} />
+                                  <TradeCard 
+                                    data={message.tradeCardData}
+                                    onTransactionComplete={(hash) => handleTransactionComplete(hash, message.tradeCardData)}
+                                  />
                                 ) : (
                                   <div
                                     className={`rounded-lg px-4 py-2 ${
@@ -478,7 +582,7 @@ function MessagesContent() {
                                         : 'bg-muted'
                                     }`}
                                   >
-                                    <p className="break-words">{message.content}</p>
+                                    <p className="break-words whitespace-pre-wrap">{message.content}</p>
                                   </div>
                                 )}
                                 <p className="text-xs text-muted-foreground mt-1">
