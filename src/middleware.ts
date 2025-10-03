@@ -13,9 +13,12 @@ const protectedPaths = [
 const publicPaths = [
     '/api/user/check',
     '/api/user/sync',
+    '/api/users', // Allow user creation without auth
     '/api/auth/login',
     '/api/portfolio',
     '/api/watchlist',
+    '/api/landing-pages', // Allow landing page operations
+    '/api/domains', // Allow domain fetching
 ];
 
 export default async function middleware(request: NextRequest) {

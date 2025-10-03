@@ -1,21 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { domainId, ownerId, ...data } = body;
 
+    if (!domainId || !ownerId) {
+      return NextResponse.json(
+        { error: 'domainId and ownerId are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if domain exists
+    const domain = await prisma.domain.findUnique({
+      where: { id: domainId },
+    });
+
+    if (!domain) {
+      return NextResponse.json(
+        { error: 'Domain not found' },
+        { status: 404 }
+      );
+    }
+
+    // Upsert landing page
     const landingPage = await prisma.domainLandingPage.upsert({
       where: { domainId },
-      update: data,
-      create: { domainId, ownerId, ...data },
+      update: {
+        ...data,
+        updatedAt: new Date(),
+      },
+      create: {
+        domainId,
+        ownerId,
+        ...data,
+      },
     });
 
     return NextResponse.json(landingPage);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving landing page:', error);
-    return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Failed to save landing page' },
+      { status: 500 }
+    );
   }
 }
 

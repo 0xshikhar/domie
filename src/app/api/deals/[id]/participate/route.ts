@@ -8,9 +8,9 @@ export async function POST(
 ) {
   try {
     const body = await request.json();
-    const { userId, contribution } = body;
+    const { userId, contribution, walletAddress } = body;
 
-    if (!userId || !contribution) {
+    if (!userId || !contribution || !walletAddress) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -56,9 +56,14 @@ export async function POST(
     // Create participation
     const participation = await prisma.dealParticipation.create({
       data: {
-        dealId: params.id,
-        userId,
+        deal: {
+          connect: { id: params.id }
+        },
+        user: {
+          connect: { id: userId }
+        },
         contribution,
+        walletAddress,
       },
     });
 

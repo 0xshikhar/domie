@@ -150,7 +150,23 @@ export default function PageBuilder({ domainId, domainName, initialData, onSave 
     try {
       await onSave({ ...landingPage, isPublished: true });
       updateLandingPage({ isPublished: true });
-      toast.success('Landing page published!');
+      
+      // Show success message with link
+      const liveUrl = `${window.location.origin}/live/${domainName}`;
+      toast.success(
+        <div className="flex flex-col gap-2">
+          <p className="font-semibold">🎉 Landing page published!</p>
+          <a 
+            href={liveUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-blue-500 hover:text-blue-600 underline"
+          >
+            View your page →
+          </a>
+        </div>,
+        { duration: 8000 }
+      );
     } catch (error) {
       toast.error('Failed to publish landing page');
       console.error(error);

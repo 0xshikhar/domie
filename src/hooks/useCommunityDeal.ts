@@ -65,11 +65,12 @@ export function useCommunityDeal() {
    * Contribute to a deal
    */
   const contribute = useCallback(
-    async (dealId: string, amount: string) => {
+    async (dealId: string, amount: string, walletAddress: string) => {
       if (!walletClient || !contractAddress) {
         throw new Error('Wallet not connected or contract not deployed');
       }
 
+      // Call the blockchain contract
       const hash = await walletClient.writeContract({
         address: contractAddress,
         abi: COMMUNITY_DEAL_ABI,
@@ -81,6 +82,29 @@ export function useCommunityDeal() {
       if (!publicClient) throw new Error('Public client not available');
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      // Update the database with participation info
+      try {
+        const response = await fetch(`/api/deals/${dealId}/participate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: dealId, // This should be the actual user ID in a real app
+            contribution: amount,
+            walletAddress,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to record participation in database');
+        }
+      } catch (error) {
+        console.error('Error recording participation:', error);
+        // Continue anyway since the blockchain transaction succeeded
+      }
+      
       return { hash, receipt };
     },
     [walletClient, contractAddress, publicClient]

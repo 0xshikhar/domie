@@ -89,7 +89,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </main>
             <Footer />
             {/* Global toast notifications */}
-            <Toaster richColors position="top-right" />
+            <Toaster richColors position="bottom-right" />
           </Providers>
         </ThemeProvider>
       </body>

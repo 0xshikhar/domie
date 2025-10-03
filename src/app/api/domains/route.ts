@@ -1,15 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/domains - Fetch all domains with filters
+// GET /api/domains - Fetch all domains with filters or single domain by name
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const name = searchParams.get('name');
     const search = searchParams.get('search');
     const isListed = searchParams.get('isListed');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // If name is provided, fetch single domain
+    if (name) {
+      const domain = await prisma.domain.findUnique({
+        where: { name },
+        include: {
+          _count: {
+            select: {
+              offers: true,
+              watchlist: true,
+            },
+          },
+        },
+      });
+
+      if (!domain) {
+        return NextResponse.json(
+          { error: 'Domain not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(domain);
+    }
+
+    // Otherwise, fetch list of domains
     const where: any = {};
     
     if (search) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,13 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
   const { contribute } = useCommunityDeal();
   const { authenticated, login, user } = usePrivy();
   const { client } = useXMTP();
+  const [walletAddress, setWalletAddress] = useState<string>('');
+  
+  useEffect(() => {
+    if (user?.wallet?.address) {
+      setWalletAddress(user.wallet.address);
+    }
+  }, [user?.wallet?.address]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +63,7 @@ export default function ContributeDealModal({ open, onClose, deal, onSuccess }: 
       }
 
       // Contribute to deal
-      const result = await contribute(deal.dealId, amount);
+      const result = await contribute(deal.dealId, amount, walletAddress);
       
       if (result) {
         setSuccess(true);

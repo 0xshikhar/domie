@@ -9,7 +9,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Eye, Heart, MessageCircle, Share2, TrendingUp, Copy, ExternalLink, 
-  CheckCircle2, XCircle, Info, Brain, Activity as ActivityIcon, ShoppingCart 
+  CheckCircle2, XCircle, Info, Brain, Activity as ActivityIcon, ShoppingCart,
+  Palette 
 } from 'lucide-react';
 import { Domain } from '@/lib/doma/types';
 import BuyNowModal from '@/components/trading/BuyNowModal';
@@ -111,6 +112,13 @@ export default function DomainPageTabs({ domain }: DomainPageTabsProps) {
     toast.success('Opening chat with domain owner...');
   };
 
+  const handleCustomizePage = () => {
+    router.push(`/domain/${domain.name}/customize`);
+  };
+
+  // Check if current user is the owner
+  const isOwner = authenticated && user?.wallet?.address?.toLowerCase() === domain.owner.toLowerCase();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
@@ -144,6 +152,20 @@ export default function DomainPageTabs({ domain }: DomainPageTabsProps) {
                     <span>{domain.offerCount || 0} offers</span>
                   </div>
                 </div>
+
+                {/* Owner Actions */}
+                {isOwner && (
+                  <div className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCustomizePage}
+                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Palette className="h-4 w-4 mr-2" />
+                      Customize Landing Page
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Price Card - Compact */}
