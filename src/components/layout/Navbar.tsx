@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { usePrivy } from '@privy-io/react-auth';
 import { Menu, X, MessageCircle, Search, Users, FileText, TrendingUp, Activity } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -29,8 +30,8 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600" />
-            <span className="text-xl font-bold">Domie</span>
+          <Image src="/logo.png" alt="Logo" width={35} height={35} />
+            <span className="text-2xl font-bold">Domie</span>
           </Link>
 
           {/* Desktop Navigation */}
