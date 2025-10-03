@@ -82,19 +82,6 @@ export default function CustomLandingPage({
 
       {/* Render Sections */}
       {sections.map((section) => renderSection(section))}
-
-      {/* Footer */}
-      <footer
-        className="py-8 px-6 text-center"
-        style={{
-          backgroundColor: colors.secondary,
-          color: '#ffffff',
-        }}
-      >
-        <p className="opacity-70">
-          © {new Date().getFullYear()} {domainName}. Powered by Domanzo.
-        </p>
-      </footer>
     </div>
   );
 }

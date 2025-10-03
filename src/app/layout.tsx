@@ -83,11 +83,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           disableTransitionOnChange
         >
           <Providers>
-            <Navbar />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
+            {children}
             {/* Global toast notifications */}
             <Toaster richColors position="bottom-right" />
           </Providers>
